@@ -8,12 +8,13 @@
 .idea/usage.statistics.xml
 .idea/shelf
 
-# deps
 node_modules/
-
-# env
+dist/
 .env
-.env.production
+*.local
+.DS_Store
+coverage/
+.vite/
 
 # logs
 logs/

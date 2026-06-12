@@ -1,1 +1,103 @@
 @import "tailwindcss";
+
+@theme {
+  /* Ink palette */
+  --color-ink-50:  #f5f4f2;
+  --color-ink-100: #e8e6e1;
+  --color-ink-200: #d1cdc4;
+  --color-ink-300: #b3aca0;
+  --color-ink-400: #8f877a;
+  --color-ink-500: #736b5e;
+  --color-ink-600: #5c5449;
+  --color-ink-700: #4a4339;
+  --color-ink-800: #3d382f;
+  --color-ink-900: #2e2921;
+  --color-ink-950: #1a1712;
+
+  /* Amber palette */
+  --color-amber-50:  #fdf8ec;
+  --color-amber-100: #faefc9;
+  --color-amber-200: #f4dc8e;
+  --color-amber-300: #edc654;
+  --color-amber-400: #e6b02c;
+  --color-amber-500: #d9941c;
+  --color-amber-600: #bf7015;
+  --color-amber-700: #9b5214;
+  --color-amber-800: #7e4118;
+  --color-amber-900: #6a3618;
+  --color-amber-950: #3d1b09;
+
+  /* Parchment */
+  --color-parchment: #faf7f2;
+
+  /* Fonts */
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body:    "Source Serif 4", Georgia, serif;
+  --font-mono:    "JetBrains Mono", monospace;
+  --font-ui:      "Inter", system-ui, sans-serif;
+}
+
+
+@layer base {
+  html {
+    @apply bg-parchment text-ink-900 font-body antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+
+  ::selection {
+    @apply bg-amber-200 text-ink-950;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-amber-500 rounded-sm;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-1.5;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-300 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-400;
+  }
+}
+
+@layer components {
+  /* Tiptap editor */
+  .tiptap {
+    @apply outline-none font-body text-ink-800 leading-relaxed;
+
+    p { @apply mb-4; }
+    h1 { @apply font-display text-3xl font-bold text-ink-950 mb-4 mt-8; }
+    h2 { @apply font-display text-2xl font-semibold text-ink-900 mb-3 mt-7; }
+    h3 { @apply font-display text-xl font-semibold text-ink-800 mb-2 mt-6; }
+    blockquote {
+      @apply border-l-4 border-amber-400 pl-4 italic text-ink-600 my-6;
+    }
+    code {
+      @apply font-mono text-sm bg-ink-100 text-ink-700 px-1.5 py-0.5 rounded;
+    }
+    pre {
+      @apply font-mono text-sm bg-ink-950 text-ink-100 p-4 rounded-lg my-6 overflow-x-auto;
+      code { @apply bg-transparent text-inherit p-0 rounded-none; }
+    }
+    ul { @apply list-disc list-inside mb-4 space-y-1; }
+    ol { @apply list-decimal list-inside mb-4 space-y-1; }
+    hr { @apply border-ink-200 my-8; }
+    a { @apply text-amber-700 underline underline-offset-2 hover:text-amber-800; }
+    img { @apply rounded-lg my-6 max-w-full; }
+
+    p.is-editor-empty:first-child::before {
+      content: attr(data-placeholder);
+      @apply text-ink-300 float-left h-0 pointer-events-none;
+    }
+  }
+}
