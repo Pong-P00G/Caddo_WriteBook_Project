@@ -37,7 +37,12 @@ async function handleRegister() {
         <span class="font-display text-2xl font-bold text-ink-900">Writebook</span>
       </div>
 
-      <div class="bg-white rounded-2xl border border-ink-100 shadow-sm p-8">
+      <div class="bg-white rounded-2xl border border-ink-100 shadow-sm p-8 relative overflow-hidden">
+        <!-- Progress bar -->
+        <div v-if="loading" class="absolute top-0 left-0 w-full h-1 bg-amber-100">
+          <div class="h-full bg-amber-500 animate-progress w-full origin-left"></div>
+        </div>
+
         <h1 class="font-display text-xl font-semibold text-ink-900 mb-6">Create account</h1>
 
         <form @submit.prevent="handleRegister" class="space-y-4">
@@ -99,3 +104,13 @@ async function handleRegister() {
     </div>
   </div>
 </template>
+
+<style scoped>
+@keyframes progress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.animate-progress {
+  animation: progress 1.5s infinite ease-in-out;
+}
+</style>
