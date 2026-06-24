@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   FileText, CalendarDays, Users, CheckSquare,
-  BookOpen, Lightbulb, ArrowRight, Loader2,
+  BookOpen, Lightbulb, ArrowRight, Loader2, Table2,
 } from 'lucide-vue-next'
 import { useNotesStore } from '@/store/notes'
 
@@ -119,6 +119,64 @@ const templates = [
         { type: 'blockquote', content: [{ type: 'paragraph' }] },
         { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'My Takeaways' }] },
         { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph' }] }] },
+      ],
+    }),
+  },
+  {
+    id:    'spreadsheet',
+    icon:  Table2,
+    label: 'Spreadsheet',
+    hint:  'Table-based data',
+    title: '',
+    content: JSON.stringify({
+      type: 'doc',
+      content: [
+        { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Data Table' }] },
+        { type: 'paragraph' },
+        {
+          type: 'table',
+          content: {
+            type: 'table_row',
+            content: [
+              { type: 'table_cell', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Item' }] }], attrs: { colspan: 1, rowspan: 1 } },
+              { type: 'table_cell', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Value' }] }], attrs: { colspan: 1, rowspan: 1 } },
+              { type: 'table_cell', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Notes' }] }], attrs: { colspan: 1, rowspan: 1 } },
+            ],
+          },
+        },
+        {
+          type: 'table',
+          content: {
+            type: 'table_row',
+            content: [
+              { type: 'table_cell', content: [{ type: 'paragraph' }], attrs: { colspan: 1, rowspan: 1 } },
+              { type: 'table_cell', content: [{ type: 'paragraph' }], attrs: { colspan: 1, rowspan: 1 } },
+              { type: 'table_cell', content: [{ type: 'paragraph' }], attrs: { colspan: 1, rowspan: 1 } },
+            ],
+          },
+        },
+        {
+          type: 'table',
+          content: {
+            type: 'table_row',
+            content: [
+              { type: 'table_cell', content: [{ type: 'paragraph' }], attrs: { colspan: 1, rowspan: 1 } },
+              { type: 'table_cell', content: [{ type: 'paragraph' }], attrs: { colspan: 1, rowspan: 1 } },
+              { type: 'table_cell', content: [{ type: 'paragraph' }], attrs: { colspan: 1, rowspan: 1 } },
+            ],
+          },
+        },
+        {
+          type: 'table',
+          content: {
+            type: 'table_row',
+            content: [
+              { type: 'table_cell', content: [{ type: 'paragraph' }], attrs: { colspan: 1, rowspan: 1 } },
+              { type: 'table_cell', content: [{ type: 'paragraph' }], attrs: { colspan: 1, rowspan: 1 } },
+              { type: 'table_cell', content: [{ type: 'paragraph' }], attrs: { colspan: 1, rowspan: 1 } },
+            ],
+          },
+        },
       ],
     }),
   },
