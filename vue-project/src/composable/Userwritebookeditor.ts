@@ -1,4 +1,4 @@
-import { useEditor } from '@tiptap/vue-3'
+import { useEditor, Editor } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import CharacterCount from '@tiptap/extension-character-count'
@@ -11,7 +11,32 @@ import Subscript from '@tiptap/extension-subscript'
 import Superscript from '@tiptap/extension-superscript'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
+import { Extension } from '@tiptap/core'
 import { ref, onBeforeUnmount } from 'vue'
+
+// Custom extension to handle image keyboard deletion
+const ImageExtension = Extension.create({
+  name: 'imageExtension',
+
+  addKeyboardShortcuts() {
+    return {
+      Delete: () => {
+        if (this.editor.isActive('image')) {
+          this.editor.commands.deleteNode('image')
+          return true
+        }
+        return false
+      },
+      Backspace: () => {
+        if (this.editor.isActive('image')) {
+          this.editor.commands.deleteNode('image')
+          return true
+        }
+        return false
+      },
+    }
+  },
+})
 
 export function useWritebookEditor(
   initialContent: string = '',
@@ -31,7 +56,13 @@ export function useWritebookEditor(
         placeholder: 'Begin your chapter…',
       }),
       CharacterCount,
-      Image.configure({ inline: false, allowBase64: true }),
+      Image.configure({
+        inline: false,
+        allowBase64: true,
+        HTMLAttributes: {
+          class: 'cursor-pointer',
+        },
+      }),
       Link.configure({ openOnClick: false }),
       Underline,
       Highlight.configure({ multicolor: true }),
@@ -40,6 +71,7 @@ export function useWritebookEditor(
       Superscript,
       TaskList,
       TaskItem.configure({ nested: true }),
+      ImageExtension,
     ],
     editorProps: {
       attributes: { class: 'tiptap min-h-[400px] p-0' },
