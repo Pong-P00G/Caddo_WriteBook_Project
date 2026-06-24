@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { Star, FileText, List, Code2, BookOpen, Check } from "lucide-vue-next";
-import type { Note } from "@/store/types/interface";
+import type { Note } from "../../store/types/interface";
 
 const props = defineProps<{ note: Note; isSelected?: boolean; isSelectionMode?: boolean }>();
 const emit = defineEmits<{ (e: "toggleSelection", id: string): void; (e: "enterSelectionMode", id: string): void }>();
@@ -30,11 +30,14 @@ const preview = computed((): string => {
     if (!parsed.value) return props.note.content?.slice(0, 160) ?? "";
     function walk(nodes: TiptapNode[]): string {
         return nodes
-            .flatMap((n) => {
-                if (n.type === "text") return [n.text ?? ""];
-                if (n.content) return [walk(n.content)];
-                return [];
-            })
+            .reduce((acc: string[], n) => {
+                if (n.type === "text") {
+                    acc.push(n.text ?? "");
+                } else if (n.content) {
+                    acc.push(walk(n.content));
+                }
+                return acc;
+            }, [])
             .join(" ");
     }
     return walk(parsed.value.content ?? [])
@@ -206,7 +209,7 @@ const readingTime = computed((): string => {
 
         <!-- Hover shine overlay -->
         <div
-            class="absolute inset-0 rounded-xl bg-gradient-to-b from-white/0 to-white/0 group-hover:from-white/[0.02] group-hover:to-white/[0.0] dark:group-hover:from-white/[0.01] pointer-events-none transition-opacity"
+            class="absolute inset-0 rounded-xl bg-linear-to-b from-white/0 to-white/0 group-hover:from-white/2 group-hover:to-white/0 dark:group-hover:from-white/1 pointer-events-none transition-opacity"
         />
     </div>
 </template>

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from "vue";
+import { onMounted, computed, ref, defineAsyncComponent } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 import { PenLine, Trash2, Check } from "lucide-vue-next";
-import { useNotesStore } from "@/store/notes";
-import NoteCard from "@/assets/Ui/NoteCard.vue";
+import { useNotesStore } from "../store/notes";
 
 const store = useNotesStore();
 const router = useRouter();
+const NoteCard = defineAsyncComponent(() => import("@/components/NoteCard.vue") as Promise<any>);
 onMounted(() => store.fetchNotes());
 const shown = computed(() => store.notes.filter((n) => !n.isDeleted));
 const selectedNotes = ref<Set<string>>(new Set());
@@ -36,6 +36,11 @@ function deleteSelectedNotes() {
 
 function clearSelection() {
     selectedNotes.value.clear();
+}
+
+function enterSelectionMode(id: string) {
+    isSelectionMode.value = true;
+    toggleNoteSelection(id);
 }
 </script>
 
@@ -146,12 +151,12 @@ function clearSelection() {
                         :is-selected="selectedNotes.has(note._id)"
                         :is-selection-mode="isSelectionMode"
                         @toggle-selection="toggleNoteSelection"
-                        @enter-selection-mode="(id) => { isSelectionMode = true; toggleNoteSelection(id); }"
+                        @enter-selection-mode="enterSelectionMode"
                     />
                     <RouterLink
                         v-if="!isSelectionMode"
                         to="/app/notes/new"
-                        class="group flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-ink-200 dark:border-ink-700 hover:border-ink-400 dark:hover:border-ink-500 transition-colors min-h-[190px]"
+                        class="group flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-ink-200 dark:border-ink-700 hover:border-ink-400 dark:hover:border-ink-500 transition-colors min-h-48"
                     >
                         <PenLine
                             :size="18"

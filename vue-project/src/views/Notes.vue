@@ -13,7 +13,7 @@ import {
     Trash2,
 } from "lucide-vue-next";
 import { useNotesStore } from "@/store/notes";
-import NoteCard from "@/assets/Ui/NoteCard.vue";
+import NoteCard from "@/components/NoteCard.vue";
 
 const store = useNotesStore();
 const router = useRouter();
