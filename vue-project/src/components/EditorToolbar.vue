@@ -4,10 +4,36 @@ import {
   Bold, Italic, Underline, Strikethrough, Code, Code2, Heading1, Heading2,
   Heading3, List, ListOrdered, Quote, Minus, Undo, Redo, Link2, AlignLeft,
   AlignCenter, AlignRight, AlignJustify, Highlighter, Subscript, Superscript,
-  CheckSquare
+  CheckSquare, Image
 } from 'lucide-vue-next'
+import { ref } from 'vue'
 
 const props = defineProps<{ editor: Editor | undefined }>()
+
+const fileInput = ref<HTMLInputElement | null>(null)
+
+function openImagePicker() {
+  fileInput.value?.click()
+}
+
+function handleImageUpload(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file || !props.editor) return
+
+  if (!file.type.startsWith('image/')) {
+    alert('Please select an image file.')
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const base64 = e.target?.result as string
+    props.editor?.chain().focus().setImage({ src: base64, alt: file.name }).run()
+  }
+  reader.readAsDataURL(file)
+  target.value = ''
+}
 
 function setLink() {
   const prev = props.editor?.getAttributes('link').href ?? ''
@@ -59,6 +85,7 @@ const tools = [
   { icon: Superscript,   title: 'Superscript',            action: () => props.editor?.chain().focus().toggleSuperscript().run(),            isActive: () => !!props.editor?.isActive('superscript') },
   null,
   { icon: Link2,         title: 'Link',                   action: setLink,                                                                  isActive: () => !!props.editor?.isActive('link') },
+  { icon: Image,        title: 'Insert image',             action: openImagePicker,                                                          isActive: () => false },
   null,
   { icon: Undo,          title: 'Undo (Ctrl+Z)',          action: () => props.editor?.chain().focus().undo().run(),                        isActive: () => false },
   { icon: Redo,          title: 'Redo (Ctrl+Shift+Z)',    action: () => props.editor?.chain().focus().redo().run(),                        isActive: () => false },
@@ -67,6 +94,14 @@ const tools = [
 
 <template>
   <div class="flex items-center gap-0.5 flex-wrap">
+    <!-- Hidden file input for image upload -->
+    <input
+      ref="fileInput"
+      type="file"
+      accept="image/*"
+      class="hidden"
+      @change="handleImageUpload"
+    />
     <template v-for="(tool, i) in tools" :key="i">
       <div v-if="tool === null" class="w-px h-4 bg-ink-200 dark:bg-ink-700 mx-1.5" />
       <button
