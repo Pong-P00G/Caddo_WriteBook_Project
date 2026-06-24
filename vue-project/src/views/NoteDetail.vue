@@ -12,7 +12,7 @@ import { generateHTML } from "@tiptap/html";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
-import { useNotesStore } from "@/store/notes";
+import { useNotesStore } from "../store/notes";
 
 const route = useRoute();
 const router = useRouter();
@@ -24,14 +24,14 @@ let confirmTimer: ReturnType<typeof setTimeout>;
 
 // Refresh note when route changes (e.g., returning from edit)
 watch(() => route.params.noteId, (newId) => {
-  if (newId) store.fetchNote(newId as string);
+    if (newId) store.fetchNote(newId as string);
 }, { immediate: true });
 
 const content = computed(() => {
     if (!store.activeNote?.content) return "";
     try {
         return generateHTML(JSON.parse(store.activeNote.content), [
-            StarterKit,
+            StarterKit.configure({ link: false }),
             Image,
             Link,
         ]);
