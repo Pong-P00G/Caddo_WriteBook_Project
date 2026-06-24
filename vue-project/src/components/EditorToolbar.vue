@@ -11,6 +11,15 @@ import { ref, computed, watch, nextTick } from 'vue'
 
 const props = defineProps<{ editor: Editor | undefined }>()
 
+// ── Highlight colors ──────────────────────────────────────────────────────
+const HIGHLIGHT_COLORS = [
+  '#ffff00', '#ffcc00', '#ff9900', '#ff6666',
+  '#66ff66', '#00ffff', '#6699ff', '#cc99ff',
+  '#ff99cc', '#cccccc', '#ffffff', '#000000',
+]
+const showHighlightPopup = ref(false)
+const selectedHighlightColor = ref('#ffff00')
+
 // ── Image popup state ──────────────────────────────────────────────────────
 const showImagePopup = ref(false)
 const imagePopupPos = ref({ top: 0, left: 0 })
@@ -161,14 +170,20 @@ watch(() => props.editor?.state.selection, () => {
 })
 
 // ── Highlight functions ───────────────────────────────────────────────────
-function setHighlight() {
-  const color = window.prompt('Enter highlight color (e.g., #ffff00, yellow)', '#ffff00')
-  if (color === null) return
-  if (!color) {
-    props.editor?.chain().focus().unsetHighlight().run()
-    return
-  }
+function toggleHighlightPopup() {
+  showHighlightPopup.value = !showHighlightPopup.value
+  showLinkPopup.value = false
+  showImagePopup.value = false
+}
+
+function applyHighlight(color: string) {
   props.editor?.chain().focus().toggleHighlight({ color }).run()
+  showHighlightPopup.value = false
+}
+
+function removeHighlight() {
+  props.editor?.chain().focus().unsetHighlight().run()
+  showHighlightPopup.value = false
 }
 
 // ── Toolbar tools ──────────────────────────────────────────────────────────
@@ -196,7 +211,7 @@ const tools = [
   { icon: AlignRight,    title: 'Align right',            action: () => props.editor?.chain().focus().setTextAlign('right').run(),          isActive: () => props.editor?.isActive({ textAlign: 'right' }) },
   { icon: AlignJustify,  title: 'Justify',                action: () => props.editor?.chain().focus().setTextAlign('justify').run(),        isActive: () => props.editor?.isActive({ textAlign: 'justify' }) },
   null,
-  { icon: Highlighter,   title: 'Highlight',              action: setHighlight,                                                             isActive: () => !!props.editor?.isActive('highlight') },
+  { icon: Highlighter,   title: 'Highlight',              action: toggleHighlightPopup,                                                  isActive: () => !!props.editor?.isActive('highlight') },
   { icon: Subscript,     title: 'Subscript',              action: () => props.editor?.chain().focus().toggleSubscript().run(),              isActive: () => !!props.editor?.isActive('subscript') },
   { icon: Superscript,   title: 'Superscript',            action: () => props.editor?.chain().focus().toggleSuperscript().run(),            isActive: () => !!props.editor?.isActive('superscript') },
   null,
@@ -412,6 +427,42 @@ const tools = [
             Delete Image
           </button>
         </div>
+      </div>
+    </Transition>
+
+    <!-- ── Highlight Popup ────────────────────────────────────────── -->
+    <Transition name="popup">
+      <div
+        v-if="showHighlightPopup"
+        class="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-700 rounded-xl shadow-xl shadow-ink-900/10 dark:shadow-black/40 p-4 z-50"
+      >
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-sm font-semibold font-ui text-ink-800 dark:text-ink-100">Highlight Color</span>
+          <button @click="showHighlightPopup = false" class="p-1 rounded hover:bg-ink-100 dark:hover:bg-ink-800 text-ink-400">
+            <X :size="14" />
+          </button>
+        </div>
+
+        <!-- Color grid -->
+        <div class="grid grid-cols-6 gap-2 mb-3">
+          <button
+            v-for="color in HIGHLIGHT_COLORS"
+            :key="color"
+            @click="applyHighlight(color)"
+            class="w-8 h-8 rounded-lg transition-all hover:scale-110 active:scale-95"
+            :style="{ backgroundColor: color }"
+            :class="selectedHighlightColor === color ? 'ring-2 ring-amber-500 ring-offset-2' : 'ring-1 ring-ink-200 dark:ring-ink-700'"
+          />
+        </div>
+
+        <!-- Remove highlight -->
+        <button
+          @click="removeHighlight"
+          class="flex items-center gap-1.5 w-full px-3 py-1.5 text-xs font-ui font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+        >
+          <X :size="12" />
+          Remove Highlight
+        </button>
       </div>
     </Transition>
   </div>
