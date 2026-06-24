@@ -1,66 +1,98 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/store/auth'
+import { createRouter, createWebHistory } from "vue-router";
+import { useAuthStore } from "@/store/auth";
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     // Public
     {
-      path: '/',
-      component: () => import('../views/HomeViews.vue'),
+      path: "/",
+      component: () => import("../views/HomeViews.vue"),
     },
     {
-      path: '/login',
-      component: () => import('../views/auth/Login.vue'),
+      path: "/login",
+      component: () => import("../views/auth/Login.vue"),
       meta: { guest: true },
     },
     {
-      path: '/register',
-      component: () => import('../views/auth/Register.vue'),
+      path: "/register",
+      component: () => import("../views/auth/Register.vue"),
       meta: { guest: true },
     },
 
     // App shell (auth required)
     {
-      path: '/app',
-      component: () => import('../components/layout/AppLayout.vue'),
+      path: "/app",
+      component: () => import("../components/layout/AppLayout.vue"),
       meta: { requiresAuth: true },
       children: [
-        { path: '', redirect: '/app/library' },
-        { path: 'library', component: () => import('../views/Library.vue') },
-        { path: 'books/new', component: () => import('../views/NewBook.vue') },
-        { path: 'books/:bookId', component: () => import('../views/Books.vue') },
+        { path: "", redirect: "/app/notes" },
         {
-          path: 'books/:bookId/chapters/:chapterId/edit',
-          component: () => import('../views/Editor.vue'),
+          path: "notes",
+          name: "notes",
+          component: () => import("../views/Notes.vue"),
         },
-        { path: 'settings', component: () => import('../views/Settings.vue') },
+        {
+          path: "notes/new",
+          name: "new-note",
+          component: () => import("../views/NewNote.vue"),
+        },
+        {
+          path: "notes/:noteId",
+          name: "note",
+          component: () => import("../views/NoteDetail.vue"),
+        },
+        {
+          path: "notes/:noteId/edit",
+          name: "editor",
+          component: () => import("../views/Editor.vue"),
+        },
+        {
+          path: "library",
+          name: "library",
+          component: () => import("../views/AllNotes.vue"),
+        },
+        {
+          path: "settings",
+          name: "settings",
+          component: () => import("../views/Settings.vue"),
+        },
+        {
+          path: "profile",
+          name: "profile",
+          component: () => import("../views/Profile.vue"),
+        },
+        {
+          path: "trash",
+          name: "trash",
+          component: () => import("../views/Trash.vue"),
+        },
       ],
     },
 
-    // Public book reading
+    // Public note reading
     {
-      path: '/read/:slug',
-      component: () => import('../views/ReadViews.vue'),
+      path: "/read/:noteId",
+      component: () => import("../views/ReadViews.vue"),
     },
 
     // 404
     {
-      path: '/:pathMatch(.*)*',
-      component: () => import('../views/NotFoundView.vue'),
+      path: "/:pathMatch(.*)*",
+      component: () => import("../views/NotFoundView.vue"),
     },
   ],
-})
+});
 
 router.beforeEach((to) => {
-  const auth = useAuthStore()
+  const auth = useAuthStore();
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
-    return { path: '/login', query: { redirect: to.fullPath } }
+    return { path: "/login", query: { redirect: to.fullPath } };
   }
   if (to.meta.guest && auth.isAuthenticated) {
-    return { path: '/app/library' }
+    return { path: "/app/notes" };
   }
-})
+});
 
-export default router
+export default router;

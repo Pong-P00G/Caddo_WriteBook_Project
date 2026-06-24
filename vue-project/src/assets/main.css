@@ -1,103 +1,144 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode for Tailwind v4 */
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
-  /* Ink palette */
-  --color-ink-50:  #f5f4f2;
-  --color-ink-100: #e8e6e1;
-  --color-ink-200: #d1cdc4;
-  --color-ink-300: #b3aca0;
-  --color-ink-400: #8f877a;
-  --color-ink-500: #736b5e;
-  --color-ink-600: #5c5449;
-  --color-ink-700: #4a4339;
-  --color-ink-800: #3d382f;
-  --color-ink-900: #2e2921;
-  --color-ink-950: #1a1712;
+    /* ── Neutral gray palette (matches image — no warm tones) ── */
+    --color-ink-50: #f8f8f8;
+    --color-ink-100: #f0f0f0;
+    --color-ink-200: #e2e2e2;
+    --color-ink-300: #c8c8c8c;
+    --color-ink-400: #a0a0a0;
+    --color-ink-500: #7a7a7a;
+    --color-ink-600: #5a5a5a;
+    --color-ink-700: #3a3a3a;
+    --color-ink-800: #262626;
+    --color-ink-900: #171717;
+    --color-ink-950: #0d0d0d;
+    --color-parchment: #fdf9f0;
 
-  /* Amber palette */
-  --color-amber-50:  #fdf8ec;
-  --color-amber-100: #faefc9;
-  --color-amber-200: #f4dc8e;
-  --color-amber-300: #edc654;
-  --color-amber-400: #e6b02c;
-  --color-amber-500: #d9941c;
-  --color-amber-600: #bf7015;
-  --color-amber-700: #9b5214;
-  --color-amber-800: #7e4118;
-  --color-amber-900: #6a3618;
-  --color-amber-950: #3d1b09;
+    /* ── Amber accent (kept for interactive elements) ── */
+    --color-amber-50: #fdf8ec;
+    --color-amber-100: #faefc9;
+    --color-amber-200: #f4dc8e;
+    --color-amber-300: #edc654;
+    --color-amber-400: #e6b02c;
+    --color-amber-500: #d9941c;
+    --color-amber-600: #bf7015;
+    --color-amber-700: #9b5214;
+    --color-amber-800: #7e4118;
+    --color-amber-900: #6a3618;
+    --color-amber-950: #3d1b09;
 
-  /* Parchment */
-  --color-parchment: #faf7f2;
-
-  /* Fonts */
-  --font-display: "Playfair Display", Georgia, serif;
-  --font-body:    "Source Serif 4", Georgia, serif;
-  --font-mono:    "JetBrains Mono", monospace;
-  --font-ui:      "Inter", system-ui, sans-serif;
+    /* ── Fonts ── */
+    --font-display: "Playfair Display", Georgia, serif;
+    --font-body: "Source Serif 4", Georgia, serif;
+    --font-mono: "JetBrains Mono", monospace;
+    --font-ui: "Inter", system-ui, sans-serif;
 }
 
-
 @layer base {
-  html {
-    @apply bg-parchment text-ink-900 font-body antialiased;
-  }
+    html {
+        @apply bg-ink-50 text-ink-900 font-ui antialiased;
+    }
 
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-display;
-  }
+    html.dark {
+        @apply bg-ink-950 text-ink-100;
+    }
 
-  ::selection {
-    @apply bg-amber-200 text-ink-950;
-  }
+    ::selection {
+        @apply bg-amber-200 text-ink-900;
+    }
 
-  :focus-visible {
-    @apply outline-2 outline-offset-2 outline-amber-500 rounded-sm;
-  }
+    :focus-visible {
+        @apply outline-2 outline-offset-2 outline-amber-500 rounded-sm;
+    }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar {
-    @apply w-1.5;
-  }
-  ::-webkit-scrollbar-track {
-    @apply bg-transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    @apply bg-ink-300 rounded-full;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-ink-400;
-  }
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        @apply w-1.5;
+    }
+    ::-webkit-scrollbar-track {
+        @apply bg-transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        @apply bg-ink-300 dark:bg-ink-700 rounded-full;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        @apply bg-ink-400 dark:bg-ink-600;
+    }
 }
 
 @layer components {
-  /* Tiptap editor */
-  .tiptap {
-    @apply outline-none font-body text-ink-800 leading-relaxed;
+    /* Tiptap editor */
+    .tiptap {
+        @apply outline-none font-body text-ink-800 dark:text-ink-200 leading-relaxed;
 
-    p { @apply mb-4; }
-    h1 { @apply font-display text-3xl font-bold text-ink-950 mb-4 mt-8; }
-    h2 { @apply font-display text-2xl font-semibold text-ink-900 mb-3 mt-7; }
-    h3 { @apply font-display text-xl font-semibold text-ink-800 mb-2 mt-6; }
-    blockquote {
-      @apply border-l-4 border-amber-400 pl-4 italic text-ink-600 my-6;
-    }
-    code {
-      @apply font-mono text-sm bg-ink-100 text-ink-700 px-1.5 py-0.5 rounded;
-    }
-    pre {
-      @apply font-mono text-sm bg-ink-950 text-ink-100 p-4 rounded-lg my-6 overflow-x-auto;
-      code { @apply bg-transparent text-inherit p-0 rounded-none; }
-    }
-    ul { @apply list-disc list-inside mb-4 space-y-1; }
-    ol { @apply list-decimal list-inside mb-4 space-y-1; }
-    hr { @apply border-ink-200 my-8; }
-    a { @apply text-amber-700 underline underline-offset-2 hover:text-amber-800; }
-    img { @apply rounded-lg my-6 max-w-full; }
+        p {
+            @apply mb-4;
+        }
+        h1 {
+            @apply font-display text-3xl font-bold text-ink-900 dark:text-ink-50 mb-4 mt-8;
+        }
+        h2 {
+            @apply font-display text-2xl font-semibold text-ink-800 dark:text-ink-100 mb-3 mt-7;
+        }
+        h3 {
+            @apply font-display text-xl font-semibold text-ink-700 dark:text-ink-200 mb-2 mt-6;
+        }
+        blockquote {
+            @apply border-l-4 border-ink-300 dark:border-ink-600 pl-4 italic text-ink-500 dark:text-ink-400 my-6;
+        }
+        code {
+            @apply font-mono text-sm bg-ink-100 dark:bg-ink-800 text-ink-700 dark:text-ink-300 px-1.5 py-0.5 rounded;
+        }
+        pre {
+            @apply font-mono text-sm bg-ink-900 dark:bg-ink-900 text-ink-100 p-5 rounded-xl my-6 overflow-x-auto;
+            code {
+                @apply bg-transparent text-inherit p-0 rounded-none;
+            }
+        }
+        ul {
+            @apply list-disc mb-4 space-y-1.5 ml-6;
+        }
+        ol {
+            @apply list-decimal mb-4 space-y-1.5 ml-6;
+        }
+        li {
+            @apply leading-relaxed;
+        }
+        li p {
+            @apply mb-0;
+        }
+        ul[data-type="taskList"] {
+            @apply list-none pl-0 mb-4 space-y-1.5 ml-0;
+        }
+        li[data-type="taskItem"] {
+            @apply flex items-start gap-2;
+        }
+        li[data-type="taskItem"] input[type="checkbox"] {
+            @apply mt-1 h-4 w-4 rounded border-ink-300 dark:border-ink-600 text-amber-600 dark:text-amber-400 focus:ring-amber-500;
+        }
+        li[data-type="taskItem"] div[data-type="content"] {
+            @apply flex-1;
+        }
+        li[data-type="taskItem"]:has(input[type="checkbox"]:checked) div[data-type="content"] {
+            @apply line-through text-ink-400 dark:text-ink-600;
+        }
+        hr {
+            @apply border-ink-200 dark:border-ink-700 my-8;
+        }
+        a {
+            @apply text-amber-600 dark:text-amber-400 underline underline-offset-2 hover:text-amber-700;
+        }
+        img {
+            @apply rounded-xl my-6 max-w-full;
+        }
 
-    p.is-editor-empty:first-child::before {
-      content: attr(data-placeholder);
-      @apply text-ink-300 float-left h-0 pointer-events-none;
+        p.is-editor-empty:first-child::before {
+            content: attr(data-placeholder);
+            @apply text-ink-300 dark:text-ink-700 float-left h-0 pointer-events-none;
+        }
     }
-  }
 }

@@ -1,63 +1,89 @@
 // ─── User ──────────────────────────────────────────────
 export interface User {
-  _id: string
-  name: string
-  email: string
-  avatar?: string
-  bio?: string
-  createdAt: string
+  _id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  bio?: string;
+  createdAt: string;
 }
 
-// ─── Book ──────────────────────────────────────────────
-export type BookStatus = 'draft' | 'published' | 'archived'
-export type BookVisibility = 'private' | 'unlisted' | 'public'
-
-export interface Book {
-  _id: string
-  title: string
-  slug: string
-  description?: string
-  cover?: string
-  author: User | string
-  status: BookStatus
-  visibility: BookVisibility
-  chapters: Chapter[]
-  tags: string[]
-  wordCount: number
-  createdAt: string
-  updatedAt: string
+// ─── Note ──────────────────────────────────────────────
+export interface Note {
+  _id: string;
+  userId: string;
+  workspaceId?: string | null;
+  folderId?: string | null;
+  title: string;
+  content: string; // Tiptap JSON stringified
+  slug?: string | null;
+  tagIds: string[];
+  isFavorite: boolean;
+  isDeleted: boolean;
+  deletedAt?: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-// ─── Chapter ───────────────────────────────────────────
-export interface Chapter {
-  _id: string
-  bookId: string
-  title: string
-  content: string          // Tiptap JSON stringified
-  order: number
-  wordCount: number
-  createdAt: string
-  updatedAt: string
+// ─── Tag ──────────────────────────────────────────────
+export interface Tag {
+  _id: string;
+  userId: string;
+  name: string;
+  color: string;
+  icon?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Folder ───────────────────────────────────────────
+export interface Folder {
+  _id: string;
+  userId: string;
+  workspaceId: string;
+  parentId?: string | null;
+  name: string;
+  icon?: string;
+  order: number;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Workspace ────────────────────────────────────────
+export interface Workspace {
+  _id: string;
+  userId: string;
+  name: string;
+  icon?: string;
+  color?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ─── API wrappers ──────────────────────────────────────
 export interface ApiResponse<T> {
-  success: boolean
-  data: T
-  message?: string
+  success: boolean;
+  data: T;
+  message?: string;
+  error?: string;
 }
 
 export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   pagination: {
-    page: number
-    limit: number
-    total: number
-    pages: number
-  }
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }
 
 export interface AuthTokens {
-  accessToken: string
-  refreshToken: string
-  user: User
+  accessToken: string;
+  refreshToken: string;
+  user: User;
 }
+
+

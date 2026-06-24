@@ -1,0 +1,212 @@
+<script setup lang="ts">
+import { computed } from "vue";
+import { useRouter } from "vue-router";
+import { Star, FileText, List, Code2, BookOpen, Check } from "lucide-vue-next";
+import type { Note } from "@/store/types/interface";
+
+const props = defineProps<{ note: Note; isSelected?: boolean; isSelectionMode?: boolean }>();
+const emit = defineEmits<{ (e: "toggleSelection", id: string): void; (e: "enterSelectionMode", id: string): void }>();
+const router = useRouter();
+
+// ── Content parsing ────────────────────────────────────────────────────────
+interface TiptapNode {
+    type: string;
+    content?: TiptapNode[];
+    text?: string;
+    attrs?: Record<string, any>;
+}
+
+const parsed = computed((): TiptapNode | null => {
+    if (!props.note.content) return null;
+    try {
+        return JSON.parse(props.note.content) as TiptapNode;
+    } catch {
+        return null;
+    }
+});
+
+// Extract plain text preview (up to 160 chars)
+const preview = computed((): string => {
+    if (!parsed.value) return props.note.content?.slice(0, 160) ?? "";
+    function walk(nodes: TiptapNode[]): string {
+        return nodes
+            .flatMap((n) => {
+                if (n.type === "text") return [n.text ?? ""];
+                if (n.content) return [walk(n.content)];
+                return [];
+            })
+            .join(" ");
+    }
+    return walk(parsed.value.content ?? [])
+        .trim()
+        .slice(0, 160);
+});
+
+// Approximate word count
+const wordCount = computed((): number => {
+    if (!preview.value) return 0;
+    return preview.value.split(/\s+/).filter(Boolean).length;
+});
+
+// Detect the dominant content type for the badge
+const contentType = computed((): { label: string; icon: typeof FileText } => {
+    if (!parsed.value?.content?.length)
+        return { label: "Note", icon: FileText };
+    const first = parsed.value.content[0];
+    if (first.type === "heading")
+        return {
+            label:
+                first.attrs?.level === 1 ? "H1" : `H${first.attrs?.level ?? 2}`,
+            icon: BookOpen,
+        };
+    if (first.type === "bulletList" || first.type === "orderedList")
+        return { label: "List", icon: List };
+    if (first.type === "codeBlock") return { label: "Code", icon: Code2 };
+    // Check if any code blocks exist deeper
+    const hasCode = parsed.value.content.some((n) => n.type === "codeBlock");
+    if (hasCode) return { label: "Code", icon: Code2 };
+    return { label: "Note", icon: FileText };
+});
+
+// ── Dates ──────────────────────────────────────────────────────────────────
+function relativeTime(d: string): string {
+    const diff = Date.now() - new Date(d).getTime();
+    const mins = Math.floor(diff / 60_000);
+    if (mins < 1) return "Just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return "Yesterday";
+    if (days < 7) return `${days}d ago`;
+    return new Date(d).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+    });
+}
+
+// ── Accent color (deterministic, subtle left border) ──────────────────────
+const accentBorder = computed((): string => {
+    const colors = [
+        "border-l-amber-400",
+        "border-l-orange-400",
+        "border-l-rose-400",
+        "border-l-violet-400",
+        "border-l-sky-400",
+        "border-l-emerald-400",
+        "border-l-pink-400",
+        "border-l-teal-400",
+    ];
+    const idx =
+        props.note._id.split("").reduce((sum, c) => sum + c.charCodeAt(0), 0) %
+        colors.length;
+    return colors[idx];
+});
+
+// Reading time estimate (200 wpm)
+const readingTime = computed((): string => {
+    const total = preview.value.split(/\s+/).filter(Boolean).length;
+    const mins = Math.ceil(total / 200);
+    return mins < 1 ? "< 1 min" : `${mins} min`;
+});
+</script>
+
+<template>
+    <div
+        @click="
+            isSelectionMode
+                ? emit('toggleSelection', note._id)
+                : router.push(`/app/notes/${note._id}`)
+        "
+        @dblclick.stop="
+            emit('enterSelectionMode', note._id);
+        "
+        class="group relative flex flex-col rounded-xl border border-ink-200 dark:border-ink-800 bg-white dark:bg-ink-900 cursor-pointer overflow-hidden transition-all duration-200"
+        :class="[
+            accentBorder,
+            'border-l-[3px]',
+            'hover:border-ink-300 dark:hover:border-ink-600',
+            'hover:shadow-xl hover:shadow-ink-900/[0.07] dark:hover:shadow-black/40',
+            'hover:-translate-y-1',
+            isSelected ? 'ring-2 ring-amber-500 border-amber-500' : '',
+        ]"
+        style="min-height: 210px"
+    >
+        <!-- Select Checkbox -->
+        <div
+            v-if="isSelectionMode"
+            @click.stop="emit('toggleSelection', note._id)"
+            class="absolute top-3 right-3 z-10 w-6 h-6 rounded border border-ink-300 dark:border-ink-600 bg-white dark:bg-ink-800 flex items-center justify-center shrink-0 cursor-pointer hover:border-ink-500 dark:hover:border-ink-400 transition-colors"
+            :class="{
+                'bg-amber-500 border-amber-500': isSelected
+            }"
+        >
+            <Check
+                v-if="isSelected"
+                :size="16"
+                class="text-white"
+            />
+        </div>
+        <!-- ── Main content ── -->
+        <div class="flex flex-col flex-1 px-5 pt-5 pb-4">
+            <!-- Row 1: type badge + star -->
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-1.5">
+                    <component
+                        :is="contentType.icon"
+                        :size="11"
+                        class="text-ink-300 dark:text-ink-700"
+                    />
+                    <span
+                        class="text-[10px] font-ui font-semibold uppercase tracking-widest text-ink-300 dark:text-ink-700"
+                    >
+                        {{ contentType.label }}
+                    </span>
+                </div>
+                <Star
+                    v-if="note.isFavorite"
+                    :size="12"
+                    class="text-amber-500 fill-amber-500 shrink-0"
+                />
+            </div>
+
+            <!-- Row 2: Title -->
+            <h3
+                class="font-display font-bold text-ink-900 dark:text-ink-50 leading-snug line-clamp-2 text-[15px] mb-2.5"
+            >
+                {{ note.title || "Untitled" }}
+            </h3>
+
+            <!-- Row 3: Preview -->
+            <p
+                class="text-[13px] text-ink-500 dark:text-ink-500 font-ui leading-relaxed line-clamp-3 flex-1"
+            >
+                {{ preview || "No content yet…" }}
+            </p>
+        </div>
+
+        <!-- ── Footer ── -->
+        <div
+            class="px-5 py-3 border-t border-ink-100 dark:border-ink-800 flex items-center justify-between gap-2 bg-ink-50/50 dark:bg-ink-900/60"
+        >
+            <!-- Date -->
+            <span
+                class="text-[11px] text-ink-400 dark:text-ink-600 font-ui tabular-nums"
+            >
+                {{ relativeTime(note.updatedAt) }}
+            </span>
+
+            <!-- Reading time — visible on hover -->
+            <span
+                class="text-[11px] text-ink-300 dark:text-ink-700 font-ui opacity-0 group-hover:opacity-100 transition-opacity tabular-nums"
+            >
+                {{ readingTime }} read
+            </span>
+        </div>
+
+        <!-- Hover shine overlay -->
+        <div
+            class="absolute inset-0 rounded-xl bg-gradient-to-b from-white/0 to-white/0 group-hover:from-white/[0.02] group-hover:to-white/[0.0] dark:group-hover:from-white/[0.01] pointer-events-none transition-opacity"
+        />
+    </div>
+</template>
