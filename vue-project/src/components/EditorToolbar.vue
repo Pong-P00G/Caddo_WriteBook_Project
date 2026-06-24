@@ -5,7 +5,7 @@ import {
   Heading3, List, ListOrdered, Quote, Minus, Undo, Redo, AlignLeft,
   AlignCenter, AlignRight, AlignJustify, Highlighter, Subscript, Superscript,
   CheckSquare, Image, Link2, X, Check, ExternalLink, Trash2,
-  ChevronLeft, ChevronRight, Table2
+  ChevronLeft, ChevronRight, Table2, Plus, Minus as MinusIcon
 } from 'lucide-vue-next'
 import { ref, computed, watch, nextTick } from 'vue'
 
@@ -19,6 +19,57 @@ const HIGHLIGHT_COLORS = [
 ]
 const showHighlightPopup = ref(false)
 const selectedHighlightColor = ref('#ffff00')
+
+// ── Table popup state ──────────────────────────────────────────────────────
+const showTablePopup = ref(false)
+const isTableActive = ref(false)
+
+function checkTableSelection() {
+  if (!props.editor) return false
+  return props.editor.isActive('table')
+}
+
+function toggleTablePopup() {
+  isTableActive.value = checkTableSelection()
+  showTablePopup.value = !showTablePopup.value
+  showLinkPopup.value = false
+  showImagePopup.value = false
+  showHighlightPopup.value = false
+}
+
+function closeTablePopup() {
+  showTablePopup.value = false
+}
+
+function insertTable() {
+  props.editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+  showTablePopup.value = false
+}
+
+function addColumn() {
+  props.editor?.chain().focus().addColumnAfter().run()
+}
+
+function deleteColumn() {
+  props.editor?.chain().focus().deleteColumn().run()
+}
+
+function addRow() {
+  props.editor?.chain().focus().addRowAfter().run()
+}
+
+function deleteRow() {
+  props.editor?.chain().focus().deleteRow().run()
+}
+
+function toggleHeaderRow() {
+  props.editor?.chain().focus().toggleHeaderRow().run()
+}
+
+function deleteTable() {
+  props.editor?.chain().focus().deleteTable().run()
+  showTablePopup.value = false
+}
 
 // ── Image popup state ──────────────────────────────────────────────────────
 const showImagePopup = ref(false)
@@ -156,7 +207,23 @@ function deleteImage() {
   closeImagePopup()
 }
 
-// ── Track image selection ──────────────────────────────────────────────────
+// ── Track image and table selection ──────────────────────────────────────────
+watch(() => props.editor?.state.selection, () => {
+  if (!props.editor) return
+  const { from, to } = props.editor.state.selection
+  if (from === undefined || to === undefined) return
+
+  isImageSelected.value = checkImageSelection()
+  isTableActive.value = checkTableSelection()
+  
+  if (!isImageSelected.value && showImagePopup.value) {
+    showImagePopup.value = false
+  }
+  
+  if (!isTableActive.value && showTablePopup.value) {
+    showTablePopup.value = false
+  }
+})
 watch(() => props.editor?.state.selection, () => {
   if (!props.editor) return
   const { from, to } = props.editor.state.selection
@@ -170,6 +237,12 @@ watch(() => props.editor?.state.selection, () => {
 })
 
 // ── Highlight functions ───────────────────────────────────────────────────
+function toggleHighlightPopup() {
+  showHighlightPopup.value = !showHighlightPopup.value
+  showLinkPopup.value = false
+  showImagePopup.value = false
+  showTablePopup.value = false
+}
 function toggleHighlightPopup() {
   showHighlightPopup.value = !showHighlightPopup.value
   showLinkPopup.value = false
@@ -217,7 +290,7 @@ const tools = [
   null,
   { icon: Link2,         title: 'Link',                   action: openLinkPopup,                                                            isActive: () => !!props.editor?.isActive('link') },
   { icon: Image,         title: 'Insert / Edit image',    action: openImagePicker,                                                          isActive: () => isImageSelected.value },
-  { icon: Table2,        title: 'Insert table',              action: () => props.editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),    isActive: () => false },
+  { icon: Table2,        title: 'Table options',            action: toggleTablePopup,                                                    isActive: () => isTableActive.value },
   null,
   { icon: Undo,          title: 'Undo (Ctrl+Z)',          action: () => props.editor?.chain().focus().undo().run(),                        isActive: () => false },
   { icon: Redo,          title: 'Redo (Ctrl+Shift+Z)',    action: () => props.editor?.chain().focus().redo().run(),                        isActive: () => false },
@@ -463,6 +536,104 @@ const tools = [
           <X :size="12" />
           Remove Highlight
         </button>
+      </div>
+    </Transition>
+
+    <!-- ── Table Popup ────────────────────────────────────────────── -->
+    <Transition name="popup">
+      <div
+        v-if="showTablePopup"
+        class="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-700 rounded-xl shadow-xl shadow-ink-900/10 dark:shadow-black/40 p-4 z-50"
+      >
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-sm font-semibold font-ui text-ink-800 dark:text-ink-100">
+            {{ isTableActive ? 'Table Options' : 'Insert Table' }}
+          </span>
+          <button @click="closeTablePopup" class="p-1 rounded hover:bg-ink-100 dark:hover:bg-ink-800 text-ink-400">
+            <X :size="14" />
+          </button>
+        </div>
+
+        <!-- Insert new table (when no table is active) -->
+        <div v-if="!isTableActive" class="space-y-3">
+          <p class="text-xs font-ui text-ink-500 dark:text-ink-400">
+            Insert a new 3x3 table with header row
+          </p>
+          <button
+            @click="insertTable"
+            class="flex items-center gap-2 w-full px-4 py-2 text-sm font-ui font-semibold bg-amber-500 hover:bg-amber-600 text-ink-950 rounded-lg transition-colors"
+          >
+            <Table2 :size="16" />
+            Insert Table
+          </button>
+        </div>
+
+        <!-- Table manipulation (when table is active) -->
+        <div v-else class="space-y-3">
+          <!-- Row controls -->
+          <div>
+            <label class="block text-xs font-ui text-ink-500 dark:text-ink-400 mb-2">Rows</label>
+            <div class="flex items-center gap-2">
+              <button
+                @click="addRow"
+                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-ui text-ink-600 dark:text-ink-300 bg-ink-50 dark:bg-ink-800 hover:bg-ink-100 dark:hover:bg-ink-700 rounded-lg transition-colors"
+              >
+                <Plus :size="14" />
+                Add Row
+              </button>
+              <button
+                @click="deleteRow"
+                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-ui text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
+              >
+                <MinusIcon :size="14" />
+                Delete Row
+              </button>
+            </div>
+          </div>
+
+          <!-- Column controls -->
+          <div>
+            <label class="block text-xs font-ui text-ink-500 dark:text-ink-400 mb-2">Columns</label>
+            <div class="flex items-center gap-2">
+              <button
+                @click="addColumn"
+                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-ui text-ink-600 dark:text-ink-300 bg-ink-50 dark:bg-ink-800 hover:bg-ink-100 dark:hover:bg-ink-700 rounded-lg transition-colors"
+              >
+                <Plus :size="14" />
+                Add Column
+              </button>
+              <button
+                @click="deleteColumn"
+                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-ui text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
+              >
+                <MinusIcon :size="14" />
+                Delete Column
+              </button>
+            </div>
+          </div>
+
+          <!-- Header row toggle -->
+          <div>
+            <button
+              @click="toggleHeaderRow"
+              class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-ui text-ink-600 dark:text-ink-300 bg-ink-50 dark:bg-ink-800 hover:bg-ink-100 dark:hover:bg-ink-700 rounded-lg transition-colors w-full"
+            >
+              <ChevronRight :size="14" />
+              Toggle Header Row
+            </button>
+          </div>
+
+          <!-- Delete table -->
+          <div class="pt-2 border-t border-ink-100 dark:border-ink-800">
+            <button
+              @click="deleteTable"
+              class="flex items-center gap-1.5 w-full px-3 py-1.5 text-xs font-ui font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+            >
+              <Trash2 :size="12" />
+              Delete Table
+            </button>
+          </div>
+        </div>
       </div>
     </Transition>
   </div>
