@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRoute, RouterLink, useRouter } from "vue-router";
-import { Folder, ArrowLeft, Plus, Loader2 } from "lucide-vue-next";
+import { Folder as FolderIcon, ArrowLeft, Plus, Loader2 } from "lucide-vue-next";
 import { useNotesStore } from "@/store/notes";
+import api from "@/api/Api";
 
 const route = useRoute();
 const router = useRouter();
@@ -11,15 +12,25 @@ const folderName = ref("");
 const isCreating = ref(false);
 
 onMounted(async () => {
+    await loadFolder();
     await loadNotes();
 });
+
+async function loadFolder() {
+    const folderId = route.params.folderId as string;
+    try {
+        const { data } = await api.get(`/folders/${folderId}`);
+        if (data.success && data.data) {
+            folderName.value = data.data.name;
+        }
+    } catch (e) {
+        folderName.value = "Folder";
+    }
+}
 
 async function loadNotes() {
     const folderId = route.params.folderId as string;
     await store.fetchNotes({ folderId });
-    if (store.notes[0]?.folderId) {
-        folderName.value = store.notes[0].folderId.name || "Folder";
-    }
 }
 
 async function createNoteInFolder() {
@@ -46,7 +57,7 @@ async function createNoteInFolder() {
                 <RouterLink to="/app/notes" class="p-2 rounded-lg hover:bg-[#f0f0f0] dark:hover:bg-[#2a2a2a] transition-colors">
                     <ArrowLeft :size="18" class="text-[#999] dark:text-[#666]" />
                 </RouterLink>
-                <Folder :size="20" class="text-[#999] dark:text-[#666]" />
+                <FolderIcon :size="20" class="text-[#999] dark:text-[#666]" />
                 <h1 class="text-lg font-semibold text-[#1a1a1a] dark:text-[#f5f5f5]">
                     {{ folderName || "Folder" }}
                 </h1>
@@ -67,7 +78,7 @@ async function createNoteInFolder() {
         </div>
 
         <div v-else-if="store.notes.length === 0" class="text-center py-12">
-            <Folder :size="40" class="mx-auto mb-3 text-[#999] dark:text-[#666] opacity-50" />
+            <FolderIcon :size="40" class="mx-auto mb-3 text-[#999] dark:text-[#666] opacity-50" />
             <p class="text-[#999] dark:text-[#666] mb-4">No notes in this folder</p>
             <button
                 @click="createNoteInFolder"

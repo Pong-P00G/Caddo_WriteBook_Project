@@ -67,4 +67,16 @@ folders.delete("/:id", async (c) => {
   return c.json({ success: true, data: null });
 });
 
+// GET /folders/:id — get single folder
+folders.get("/:id", async (c) => {
+  const user = c.get("user") as IUser;
+  const folder = await Folder.findOne({
+    _id: c.req.param("id"),
+    userId: user._id,
+    isDeleted: false,
+  });
+  if (!folder) return c.json({ success: false, error: "Folder not found" }, 404);
+  return c.json({ success: true, data: folder });
+});
+
 export default folders;

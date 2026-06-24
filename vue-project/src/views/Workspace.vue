@@ -3,6 +3,7 @@ import { onMounted, ref } from "vue";
 import { useRoute, RouterLink, useRouter } from "vue-router";
 import { Briefcase, ArrowLeft, Plus, Loader2 } from "lucide-vue-next";
 import { useNotesStore } from "@/store/notes";
+import api from "@/api/Api";
 
 const route = useRoute();
 const router = useRouter();
@@ -11,15 +12,25 @@ const workspaceName = ref("");
 const isCreating = ref(false);
 
 onMounted(async () => {
+    await loadWorkspace();
     await loadNotes();
 });
+
+async function loadWorkspace() {
+    const workspaceId = route.params.workspaceId as string;
+    try {
+        const { data } = await api.get(`/workspaces/${workspaceId}`);
+        if (data.success && data.data) {
+            workspaceName.value = data.data.name;
+        }
+    } catch (e) {
+        workspaceName.value = "Workspace";
+    }
+}
 
 async function loadNotes() {
     const workspaceId = route.params.workspaceId as string;
     await store.fetchNotes({ workspaceId });
-    if (store.notes[0]?.workspaceId) {
-        workspaceName.value = store.notes[0].workspaceId.name || "Workspace";
-    }
 }
 
 async function createNoteInWorkspace() {

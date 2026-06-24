@@ -54,7 +54,10 @@ notes.get("/", async (c) => {
       { content: { $regex: search, $options: "i" } },
     ];
   }
-  const noteList = await Note.find(filter).sort({ updatedAt: -1 });
+  const noteList = await Note.find(filter)
+    .populate("folderId", "name")
+    .populate("workspaceId", "name icon")
+    .sort({ updatedAt: -1 });
   return c.json({ success: true, data: noteList });
 });
 
@@ -89,7 +92,9 @@ notes.post("/", zValidator("json", createSchema), async (c) => {
 // GET /notes/:id
 notes.get("/:id", async (c) => {
   const user = c.get("user") as IUser;
-  const note = await Note.findOne({ _id: c.req.param("id"), userId: user._id });
+  const note = await Note.findOne({ _id: c.req.param("id"), userId: user._id })
+    .populate("folderId", "name")
+    .populate("workspaceId", "name icon");
   if (!note) return c.json({ success: false, error: "Note not found" }, 404);
   return c.json({ success: true, data: note });
 });

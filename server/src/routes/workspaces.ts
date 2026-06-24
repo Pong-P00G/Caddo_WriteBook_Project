@@ -54,4 +54,15 @@ workspaces.delete("/:id", async (c) => {
   return c.json({ success: true, data: null });
 });
 
+// GET /workspaces/:id — get single workspace
+workspaces.get("/:id", async (c) => {
+  const user = c.get("user") as IUser;
+  const ws = await Workspace.findOne({
+    _id: c.req.param("id"),
+    userId: user._id,
+  });
+  if (!ws) return c.json({ success: false, error: "Workspace not found" }, 404);
+  return c.json({ success: true, data: ws });
+});
+
 export default workspaces;
