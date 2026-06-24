@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RotateCcw, Trash2 } from 'lucide-vue-next'
-import api from '@/api/Api'
-import type { Note, ApiResponse } from '@/store/types/interface'
+import api from '../api/Api'
+import type { Note, ApiResponse } from '../store/types/interface'
 
 const notes   = ref<Note[]>([])
 const loading = ref(false)

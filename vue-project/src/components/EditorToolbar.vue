@@ -17,6 +17,11 @@ const HIGHLIGHT_COLORS = [
   '#66ff66', '#00ffff', '#6699ff', '#cc99ff',
   '#ff99cc', '#cccccc', '#ffffff', '#000000',
 ]
+const IMAGE_ALIGN_OPTIONS = [
+  { v: 'left', icon: AlignLeft },
+  { v: 'center', icon: AlignCenter },
+  { v: 'right', icon: AlignRight },
+] as const
 const showHighlightPopup = ref(false)
 const selectedHighlightColor = ref('#ffff00')
 
@@ -241,12 +246,6 @@ function toggleHighlightPopup() {
   showHighlightPopup.value = !showHighlightPopup.value
   showLinkPopup.value = false
   showImagePopup.value = false
-  showTablePopup.value = false
-}
-function toggleHighlightPopup() {
-  showHighlightPopup.value = !showHighlightPopup.value
-  showLinkPopup.value = false
-  showImagePopup.value = false
 }
 
 function applyHighlight(color: string) {
@@ -308,10 +307,15 @@ const tools = [
         class="hidden"
         @change="handleImageUpload"
       />
-      <template v-for="(tool, i) in tools" :key="i">
-        <div v-if="tool === null" class="w-px h-4 bg-ink-200 dark:bg-ink-700 mx-1.5" />
+      <template v-for="(tool, i) in tools">
+        <div
+          v-if="tool === null"
+          :key="`separator-${i}`"
+          class="w-px h-4 bg-ink-200 dark:bg-ink-700 mx-1.5"
+        />
         <button
           v-else
+          :key="`tool-${i}`"
           @click="tool.action()"
           :title="tool.title"
           class="p-1.5 rounded transition-colors"
@@ -427,8 +431,7 @@ const tools = [
           <label class="block text-xs font-ui text-ink-500 dark:text-ink-400 mb-1.5">Size</label>
           <div class="flex gap-1">
             <button
-              v-for="w in ['25%', '50%', '75%', '100%'] as const"
-              :key="w"
+              v-for="w in ['25%', '50%', '75%', '100%']" :key="w"
               @click="setImageWidth(w)"
               class="flex-1 px-2 py-1.5 text-xs font-ui rounded-lg border transition-colors"
               :class="imageWidth === w
@@ -445,9 +448,9 @@ const tools = [
           <label class="block text-xs font-ui text-ink-500 dark:text-ink-400 mb-1.5">Alignment</label>
           <div class="flex gap-1">
             <button
-              v-for="a in [{ v: 'left', icon: AlignLeft }, { v: 'center', icon: AlignCenter }, { v: 'right', icon: AlignRight }] as const"
+              v-for="a in IMAGE_ALIGN_OPTIONS"
               :key="a.v"
-              @click="setImageAlign(a.v as any)"
+              @click="setImageAlign(a.v)"
               class="flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-ui rounded-lg border transition-colors"
               :class="imageAlign === a.v
                 ? 'bg-amber-100 dark:bg-amber-900/40 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400'
