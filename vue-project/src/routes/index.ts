@@ -67,6 +67,16 @@ const router = createRouter({
           name: "trash",
           component: () => import("../views/Trash.vue"),
         },
+        {
+          path: "folder/:folderId",
+          name: "folder",
+          component: () => import("../views/Folder.vue"),
+        },
+        {
+          path: "workspace/:workspaceId",
+          name: "workspace",
+          component: () => import("../views/Workspace.vue"),
+        },
       ],
     },
 
