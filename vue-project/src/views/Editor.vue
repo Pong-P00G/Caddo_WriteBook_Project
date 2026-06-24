@@ -2,7 +2,7 @@
 import { onMounted, ref, onUnmounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { EditorContent } from '@tiptap/vue-3'
-import { Loader2, Star, ArrowLeft, ChevronDown } from 'lucide-vue-next'
+import { Loader2, Star, ArrowLeft, ChevronDown, FileDown, FileSpreadsheet } from 'lucide-vue-next'
 import { useNotesStore } from '../store/notes'
 import { useWritebookEditor } from '../composable/Userwritebookeditor'
 import { defineAsyncComponent } from 'vue'
@@ -84,6 +84,68 @@ async function toggleFavorite() {
   updateSavedLabel()
 }
 
+// ── Export functions ───────────────────────────────────────────────────────
+async function exportToPDF() {
+  const { default: jsPDF } = await import('jspdf')
+  const doc = new jsPDF()
+  
+  // Title
+  doc.setFontSize(20)
+  doc.setTextColor(26, 26, 26)
+  doc.text(noteTitle.value || 'Untitled', 20, 20)
+  
+  // Content
+  doc.setFontSize(12)
+  doc.setTextColor(100, 100, 100)
+  
+  const content = editor.value?.getText() || ''
+  const lines = doc.splitTextToSize(content, 170)
+  doc.text(lines, 20, 35)
+  
+  doc.save(`${noteTitle.value || 'note'}.pdf`)
+}
+
+async function exportToExcel() {
+  const { default: utils, writeFile } = await import('xlsx')
+  
+  // Extract table data from editor if present
+  const tables = editor.value?.state.schema.nodes.table
+  let data: any[][] = []
+  
+  if (tables) {
+    // Try to get table content
+    const tableRes = editor.value?.state.doc.descendants((node) => {
+      if (node.type.name === 'table') {
+        const rows: any[][] = []
+        node.descendants((rowNode) => {
+          if (rowNode.type.name === 'table_row') {
+            const row: any[] = []
+            rowNode.descendants((cell) => {
+              if (cell.type.name === 'table_cell' || cell.type.name === 'table_header') {
+                row.push(cell.textContent)
+              }
+            })
+            rows.push(row)
+          }
+        })
+        data = rows
+      }
+    })
+  }
+  
+  // If no table data, create simple list from content
+  if (data.length === 0) {
+    const text = editor.value?.getText() || ''
+    const lines = text.split('\n').filter(l => l.trim())
+    data = lines.map(line => [line])
+  }
+  
+  const ws = utils.aoa_to_sheet(data)
+  const wb = utils.book_new()
+  utils.book_append_sheet(wb, ws, 'Notes')
+  writeFile(wb, `${noteTitle.value || 'note'}.xlsx`)
+}
+
 // ── Image click handling ──────────────────────────────────────────────────
 function handleEditorClick(e: MouseEvent) {
   const target = e.target as HTMLElement
@@ -124,8 +186,22 @@ function handleEditorClick(e: MouseEvent) {
         </span>
       </div>
 
-      <!-- Right: star + chevron -->
+      <!-- Right: star + chevron + export -->
       <div class="flex items-center gap-1.5">
+        <button
+          @click="exportToExcel"
+          class="p-1.5 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors text-ink-300 dark:text-ink-700 hover:text-amber-500"
+          title="Export to Excel"
+        >
+          <FileSpreadsheet :size="16" />
+        </button>
+        <button
+          @click="exportToPDF"
+          class="p-1.5 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors text-ink-300 dark:text-ink-700 hover:text-amber-500"
+          title="Export to PDF"
+        >
+          <FileDown :size="16" />
+        </button>
         <button
           @click="toggleFavorite"
           class="p-1.5 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
