@@ -18,6 +18,22 @@ const editingAlt = ref(false)
 const altText = ref('')
 const imageWidth = ref<'25%' | '50%' | '75%' | '100%'>('100%')
 const imageAlign = ref<'left' | 'center' | 'right'>('center')
+const isImageSelected = ref(false)
+
+// Check if an image node is currently selected
+function checkImageSelection() {
+  if (!props.editor) return false
+  const { from, to } = props.editor.state.selection
+  // Check if selection is collapsed and inside an image
+  const isImg = props.editor.isActive('image')
+  // Also check if the selection range covers an image node
+  const $from = props.editor.state.doc.resolve(from)
+  const node = $from.parent
+  if (node.type.name === 'image') {
+    return true
+  }
+  return isImg
+}
 
 // ── Link popup state ───────────────────────────────────────────────────────
 const showLinkPopup = ref(false)
@@ -30,6 +46,11 @@ const linkInputEl = ref<HTMLInputElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 
 function openImagePicker() {
+  // If image is already selected, open the edit popup instead
+  if (checkImageSelection()) {
+    openImagePopup()
+    return
+  }
   fileInput.value?.click()
 }
 
@@ -128,15 +149,14 @@ function deleteImage() {
 
 // ── Track image selection ──────────────────────────────────────────────────
 watch(() => props.editor?.state.selection, () => {
-  const { from, to } = props.editor?.state.selection ?? {}
+  if (!props.editor) return
+  const { from, to } = props.editor.state.selection
   if (from === undefined || to === undefined) return
 
-  const isImageSelected = props.editor?.isActive('image') ?? false
-  if (!isImageSelected && showImagePopup.value) {
+  isImageSelected.value = checkImageSelection()
+  
+  if (!isImageSelected.value && showImagePopup.value) {
     showImagePopup.value = false
-  }
-  if (!isImageSelected && showLinkPopup.value) {
-    // Keep link popup open if user is editing
   }
 })
 
@@ -181,7 +201,7 @@ const tools = [
   { icon: Superscript,   title: 'Superscript',            action: () => props.editor?.chain().focus().toggleSuperscript().run(),            isActive: () => !!props.editor?.isActive('superscript') },
   null,
   { icon: Link2,         title: 'Link',                   action: openLinkPopup,                                                            isActive: () => !!props.editor?.isActive('link') },
-  { icon: Image,         title: 'Insert image',           action: openImagePicker,                                                          isActive: () => props.editor?.isActive('image') },
+  { icon: Image,         title: 'Insert / Edit image',    action: openImagePicker,                                                          isActive: () => isImageSelected.value },
   null,
   { icon: Undo,          title: 'Undo (Ctrl+Z)',          action: () => props.editor?.chain().focus().undo().run(),                        isActive: () => false },
   { icon: Redo,          title: 'Redo (Ctrl+Shift+Z)',    action: () => props.editor?.chain().focus().redo().run(),                        isActive: () => false },
