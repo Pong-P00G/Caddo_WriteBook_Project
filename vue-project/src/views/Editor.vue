@@ -3,9 +3,10 @@ import { onMounted, ref, onUnmounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { EditorContent } from '@tiptap/vue-3'
 import { Loader2, Star, ArrowLeft, ChevronDown } from 'lucide-vue-next'
-import { useNotesStore } from '@/store/notes'
-import { useWritebookEditor } from '@/composable/Userwritebookeditor'
-import EditorToolbar from '@/components/EditorToolbar.vue'
+import { useNotesStore } from '../store/notes'
+import { useWritebookEditor } from '../composable/Userwritebookeditor'
+import { defineAsyncComponent } from 'vue'
+const EditorToolbar = defineAsyncComponent(() => import('../components/EditorToolbar.vue'))
 
 const route = useRoute()
 const store = useNotesStore()
@@ -82,6 +83,24 @@ async function toggleFavorite() {
   lastSavedAt.value = new Date()
   updateSavedLabel()
 }
+
+// ── Image click handling ──────────────────────────────────────────────────
+function handleEditorClick(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (target.tagName === 'IMG' && editor.value) {
+    // Find the position of the image in the document
+    const pos = editor.value.view.posAtDOM(target, 0)
+    if (pos !== null) {
+      // Set selection to cover the image node
+      const $pos = editor.value.state.doc.resolve(pos)
+      if ($pos.parent.type.name === 'image') {
+        const from = pos
+        const to = pos + $pos.parent.nodeSize
+        editor.value.commands.setTextSelection({ from, to })
+      }
+    }
+  }
+}
 </script>
 
 <template>
@@ -148,7 +167,7 @@ async function toggleFavorite() {
         />
 
         <!-- Tiptap content -->
-        <EditorContent :editor="editor" class="min-h-[400px]" />
+        <EditorContent :editor="editor" class="min-h-100" @click="handleEditorClick" />
       </div>
     </div>
   </div>
