@@ -5,7 +5,7 @@ import {
   Heading3, List, ListOrdered, Quote, Minus, Undo, Redo, AlignLeft,
   AlignCenter, AlignRight, AlignJustify, Highlighter, Subscript, Superscript,
   CheckSquare, Image, Link2, X, Check, ExternalLink, Trash2,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Table2
 } from 'lucide-vue-next'
 import { ref, computed, watch, nextTick } from 'vue'
 
@@ -202,6 +202,7 @@ const tools = [
   null,
   { icon: Link2,         title: 'Link',                   action: openLinkPopup,                                                            isActive: () => !!props.editor?.isActive('link') },
   { icon: Image,         title: 'Insert / Edit image',    action: openImagePicker,                                                          isActive: () => isImageSelected.value },
+  { icon: Table2,        title: 'Insert table',              action: () => props.editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),    isActive: () => false },
   null,
   { icon: Undo,          title: 'Undo (Ctrl+Z)',          action: () => props.editor?.chain().focus().undo().run(),                        isActive: () => false },
   { icon: Redo,          title: 'Redo (Ctrl+Shift+Z)',    action: () => props.editor?.chain().focus().redo().run(),                        isActive: () => false },

@@ -104,9 +104,14 @@ export function useWritebookEditor(
 
   function setContent(content: string) {
     if (!editor.value) return
-    const parsed = content ? JSON.parse(content) : ''
-    editor.value.commands.setContent(parsed, { emitUpdate: false })
-    wordCount.value = editor.value.storage.characterCount.words()
+    try {
+      const parsed = content ? JSON.parse(content) : { type: 'doc', content: [{ type: 'paragraph' }] }
+      editor.value.commands.setContent(parsed, { emitUpdate: false })
+      wordCount.value = editor.value.storage.characterCount.words()
+    } catch (e) {
+      console.error('Failed to parse content:', e)
+      editor.value.commands.setContent({ type: 'doc', content: [{ type: 'paragraph' }] }, { emitUpdate: false })
+    }
   }
 
   return { editor, wordCount, isSaving, setContent }

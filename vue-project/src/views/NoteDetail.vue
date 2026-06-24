@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from "vue";
+import { onMounted, computed, ref, watch } from "vue";
 import { useRoute, useRouter, RouterLink } from "vue-router";
 import {
     Pencil,
@@ -22,7 +22,10 @@ const noteId = route.params.noteId as string;
 const confirmDelete = ref(false);
 let confirmTimer: ReturnType<typeof setTimeout>;
 
-onMounted(() => store.fetchNote(noteId));
+// Refresh note when route changes (e.g., returning from edit)
+watch(() => route.params.noteId, (newId) => {
+  if (newId) store.fetchNote(newId as string);
+}, { immediate: true });
 
 const content = computed(() => {
     if (!store.activeNote?.content) return "";
