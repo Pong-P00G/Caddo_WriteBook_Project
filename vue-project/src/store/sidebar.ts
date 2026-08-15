@@ -64,6 +64,11 @@ export const useSidebarStore = defineStore("sidebar", () => {
     return data.data;
   }
 
+  async function deleteFolder(id: string): Promise<void> {
+    await api.delete(`/folders/${id}`);
+    folders.value = folders.value.filter((f) => f._id !== id);
+  }
+
   // ── Workspaces ──────────────────────────────────────────────────────────────
   async function createWorkspace(
     name: string,
@@ -77,6 +82,12 @@ export const useSidebarStore = defineStore("sidebar", () => {
     return data.data;
   }
 
+  async function deleteWorkspace(id: string): Promise<void> {
+    await api.delete(`/workspaces/${id}`);
+    workspaces.value = workspaces.value.filter((w) => w._id !== id);
+    folders.value = folders.value.filter((f) => f.workspaceId !== id);
+  }
+
   return {
     workspaces,
     folders,
@@ -87,6 +98,8 @@ export const useSidebarStore = defineStore("sidebar", () => {
     deleteTag,
     updateTag,
     createFolder,
+    deleteFolder,
     createWorkspace,
+    deleteWorkspace,
   };
 });

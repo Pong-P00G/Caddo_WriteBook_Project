@@ -56,6 +56,9 @@ NoteSchema.index({
   isDeleted: 1,
   updatedAt: -1,
 });
+NoteSchema.index({ userId: 1, isFavorite: 1, isDeleted: 1, updatedAt: -1 });
+NoteSchema.index({ userId: 1, isDeleted: 1, deletedAt: -1 });
 NoteSchema.index({ userId: 1, tagIds: 1 });
+NoteSchema.index({ title: "text", content: "text" });
 
 export const Note = mongoose.model<INote>("Note", NoteSchema);

@@ -87,63 +87,112 @@ async function toggleFavorite() {
 // ── Export functions ───────────────────────────────────────────────────────
 async function exportToPDF() {
   const { default: jsPDF } = await import('jspdf')
+  const { default: autoTable } = await import('jspdf-autotable')
   const doc = new jsPDF()
-  
+
   // Title
   doc.setFontSize(20)
   doc.setTextColor(26, 26, 26)
   doc.text(noteTitle.value || 'Untitled', 20, 20)
-  
-  // Content
-  doc.setFontSize(12)
-  doc.setTextColor(100, 100, 100)
-  
-  const content = editor.value?.getText() || ''
-  const lines = doc.splitTextToSize(content, 170)
-  doc.text(lines, 20, 35)
-  
-  doc.save(`${noteTitle.value || 'note'}.pdf`)
-}
 
-async function exportToExcel() {
-  const { default: utils, writeFile } = await import('xlsx')
-  
-  // Extract table data from editor if present
-  const tables = editor.value?.state.schema.nodes.table
-  let data: any[][] = []
-  
-  if (tables) {
-    // Try to get table content
-    const tableRes = editor.value?.state.doc.descendants((node) => {
+  let yPos = 35
+  let hadTables = false
+
+  if (editor.value?.state.schema.nodes.table) {
+    editor.value?.state.doc.descendants((node) => {
       if (node.type.name === 'table') {
-        const rows: any[][] = []
+        const headRows: any[][] = []
+        const bodyRows: any[][] = []
+        let isHeader = true
+
         node.descendants((rowNode) => {
           if (rowNode.type.name === 'table_row') {
             const row: any[] = []
             rowNode.descendants((cell) => {
               if (cell.type.name === 'table_cell' || cell.type.name === 'table_header') {
-                row.push(cell.textContent)
+                let cellText = ''
+                cell.descendants((inner) => {
+                  if (inner.isText) cellText += inner.text
+                })
+                row.push(cellText)
               }
             })
-            rows.push(row)
+            if (isHeader) {
+              headRows.push(row)
+              isHeader = false
+            } else {
+              bodyRows.push(row)
+            }
           }
         })
-        data = rows
+
+        autoTable(doc, {
+          head: headRows.length > 0 ? headRows : [bodyRows[0] || []],
+          body: headRows.length > 0 ? bodyRows : bodyRows.slice(1),
+          startY: yPos,
+          margin: { left: 20, right: 20 },
+          theme: 'grid',
+          headStyles: { fillColor: [45, 45, 45], textColor: [255, 255, 255] },
+          alternateRowStyles: { fillColor: [245, 245, 245] },
+        })
+        // @ts-ignore
+        yPos = doc.lastAutoTable?.finalY + 15 || yPos + 30
+        hadTables = true
       }
     })
   }
-  
-  // If no table data, create simple list from content
+
+  // Plain text if no tables
+  if (!hadTables) {
+    const content = editor.value?.getText() || ''
+    if (content.trim()) {
+      doc.setFontSize(12)
+      doc.setTextColor(80, 80, 80)
+      const lines = doc.splitTextToSize(content, 170)
+      doc.text(lines, 20, yPos)
+    }
+  }
+
+  doc.save(`${noteTitle.value || 'note'}.pdf`)
+}
+
+async function exportToExcel() {
+  const XLSX = await import('xlsx')
+  let data: any[][] = []
+
+  if (editor.value?.state.schema.nodes.table) {
+    editor.value?.state.doc.descendants((node) => {
+      if (node.type.name === 'table') {
+        node.descendants((rowNode) => {
+          if (rowNode.type.name === 'table_row') {
+            const row: any[] = []
+            rowNode.descendants((cell) => {
+              if (cell.type.name === 'table_cell' || cell.type.name === 'table_header') {
+                let cellText = ''
+                cell.descendants((inner) => {
+                  if (inner.isText) cellText += inner.text
+                })
+                row.push(cellText)
+              }
+            })
+            data.push(row)
+          }
+        })
+      }
+    })
+  }
+
+  // Fallback: plain text
   if (data.length === 0) {
     const text = editor.value?.getText() || ''
     const lines = text.split('\n').filter(l => l.trim())
     data = lines.map(line => [line])
   }
-  
-  const ws = utils.aoa_to_sheet(data)
-  const wb = utils.book_new()
-  utils.book_append_sheet(wb, ws, 'Notes')
-  writeFile(wb, `${noteTitle.value || 'note'}.xlsx`)
+
+  const ws = XLSX.utils.aoa_to_sheet(data)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Notes')
+  XLSX.writeFile(wb, `${noteTitle.value || 'note'}.xlsx`)
 }
 
 // ── Image click handling ──────────────────────────────────────────────────

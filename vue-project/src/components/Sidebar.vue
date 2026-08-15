@@ -207,6 +207,38 @@ function getWorkspaceIcon(ws: { icon?: string }) {
     };
     return iconMap[ws.icon || "🏠"] || "home";
 }
+
+async function handleDeleteWorkspace(ws: any, e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`Are you sure you want to delete workspace "${ws.name}"? Notes and folders inside will be moved to trash.`)) {
+        return;
+    }
+    try {
+        await sidebar.deleteWorkspace(ws._id);
+        if (route.path.includes(ws._id)) {
+            router.push('/app/notes');
+        }
+    } catch (err: any) {
+        alert(err?.response?.data?.error ?? 'Failed to delete workspace');
+    }
+}
+
+async function handleDeleteFolder(folder: any, e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`Are you sure you want to delete folder "${folder.name}"? Notes inside will be moved to trash.`)) {
+        return;
+    }
+    try {
+        await sidebar.deleteFolder(folder._id);
+        if (route.path.includes(folder._id)) {
+            router.push('/app/notes');
+        }
+    } catch (err: any) {
+        alert(err?.response?.data?.error ?? 'Failed to delete folder');
+    }
+}
 </script>
 
 <template>
@@ -310,21 +342,32 @@ function getWorkspaceIcon(ws: { icon?: string }) {
 
                 <!-- Workspace list -->
                 <div v-if="!collapsed.workspaces" class="space-y-0.5">
-                    <RouterLink
+                    <div
                         v-for="ws in sidebar.workspaces"
                         :key="ws._id"
-                        :to="ws._id === sidebar.workspaces[0]?._id ? '/app/notes' : `/app/workspace/${ws._id}`"
-                        class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors"
+                        class="group flex items-center justify-between rounded-lg transition-colors"
                         :class="
                             isActive(ws._id === sidebar.workspaces[0]?._id ? '/app/notes' : `/app/workspace/${ws._id}`)
                                 ? 'bg-white dark:bg-[#252525] text-[#1a1a1a] dark:text-[#f5f5f5] font-medium shadow-sm'
                                 : 'text-[#666] dark:text-[#999] hover:bg-white/70 dark:hover:bg-[#252525]/70 hover:text-[#1a1a1a] dark:hover:text-[#f5f5f5]'
                         "
                     >
-                        <Home v-if="getWorkspaceIcon(ws) === 'home'" :size="16" class="shrink-0 text-[#999] dark:text-[#666]" />
-                        <Briefcase v-else :size="16" class="shrink-0 text-[#999] dark:text-[#666]" />
-                        <span class="truncate">{{ ws.name }}</span>
-                    </RouterLink>
+                        <RouterLink
+                            :to="ws._id === sidebar.workspaces[0]?._id ? '/app/notes' : `/app/workspace/${ws._id}`"
+                            class="flex-1 min-w-0 flex items-center gap-3 px-3 py-2 text-sm"
+                        >
+                            <Home v-if="getWorkspaceIcon(ws) === 'home'" :size="16" class="shrink-0 text-[#999] dark:text-[#666]" />
+                            <Briefcase v-else :size="16" class="shrink-0 text-[#999] dark:text-[#666]" />
+                            <span class="truncate">{{ ws.name }}</span>
+                        </RouterLink>
+                        <button
+                            @click="handleDeleteWorkspace(ws, $event)"
+                            class="opacity-0 group-hover:opacity-100 p-1 mr-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-[#999] hover:text-red-500 transition-all shrink-0"
+                            title="Delete workspace"
+                        >
+                            <Trash2 :size="13" />
+                        </button>
+                    </div>
                     <p
                         v-if="!sidebar.loading && sidebar.workspaces.length === 0 && !isCreatingWorkspace"
                         class="px-3 py-2 text-xs text-[#999] dark:text-[#666]"
@@ -419,11 +462,11 @@ function getWorkspaceIcon(ws: { icon?: string }) {
                     <div
                         v-for="folder in sidebar.folders"
                         :key="folder._id"
-                        class="rounded-lg hover:bg-white/70 dark:hover:bg-[#252525]/70 transition-colors"
+                        class="group flex items-center justify-between rounded-lg hover:bg-white/70 dark:hover:bg-[#252525]/70 transition-colors"
                     >
                         <RouterLink
                             :to="`/app/folder/${folder._id}`"
-                            class="w-full flex items-center gap-3 px-3 py-2 text-sm text-[#666] dark:text-[#999] hover:text-[#1a1a1a] dark:hover:text-[#f5f5f5]"
+                            class="flex-1 min-w-0 flex items-center gap-3 px-3 py-2 text-sm text-[#666] dark:text-[#999] hover:text-[#1a1a1a] dark:hover:text-[#f5f5f5]"
                         >
                             <ChevronDown
                                 v-if="foldersExpanded[folder._id]"
@@ -445,8 +488,15 @@ function getWorkspaceIcon(ws: { icon?: string }) {
                                 :size="15"
                                 class="shrink-0 text-[#999] dark:text-[#666]"
                             />
-                            <span>{{ folder.name }}</span>
+                            <span class="truncate">{{ folder.name }}</span>
                         </RouterLink>
+                        <button
+                            @click="handleDeleteFolder(folder, $event)"
+                            class="opacity-0 group-hover:opacity-100 p-1 mr-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-[#999] hover:text-red-500 transition-all shrink-0"
+                            title="Delete folder"
+                        >
+                            <Trash2 :size="13" />
+                        </button>
                     </div>
                     <p
                         v-if="!sidebar.loading && sidebar.folders.length === 0 && !isCreatingFolder"

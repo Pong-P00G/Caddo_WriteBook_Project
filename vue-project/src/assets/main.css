@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* Enable class-based dark mode for Tailwind v4 */
-@variant dark (&:where(.dark, .dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
     /* ── Neutral gray palette (matches image — no warm tones) ── */
@@ -141,30 +141,38 @@
             @apply bg-yellow-200 dark:bg-yellow-600 text-ink-900 dark:text-ink-950 rounded px-0.5 py-0.5;
         }
 
-        /* Tables */
+        /* Tables - Excel style */
         table {
-            @apply w-full border-collapse my-6;
+            @apply w-full border-collapse my-6 text-sm;
+            border-spacing: 0;
+            /* Excel-like outer border */
+            border: 1px solid #d4d4d4;
         }
         th {
-            @apply bg-ink-100 dark:bg-ink-800 text-ink-700 dark:text-ink-200 font-semibold text-left px-4 py-2.5 border border-ink-200 dark:border-ink-700;
+            @apply bg-ink-50 dark:bg-ink-800 text-ink-900 dark:text-ink-100 font-semibold text-left px-3 py-2.5;
+            /* Excel grid borders */
+            border: 1px solid #d4d4d4;
+            border-top: 2px solid #404040;
+            border-bottom: 2px solid #404040;
         }
         td {
-            @apply px-4 py-3 border border-ink-200 dark:border-ink-700 text-ink-700 dark:text-ink-300;
+            @apply px-3 py-2.5 text-ink-700 dark:text-ink-300;
+            /* Full grid borders like Excel */
+            border: 1px solid #d4d4d4;
+        }
+        /* Remove double borders for cleaner Excel look */
+        th + th, td + td {
+            border-left: 1px solid #d4d4d4;
+        }
+        tr + tr td {
+            border-top: 1px solid #d4d4d4;
+        }
+        /* Alternating rows - subtle Excel stripe */
+        tr:nth-child(even) td {
+            @apply bg-[#fafafa] dark:bg-ink-900/50;
         }
         tr:hover td {
-            @apply bg-ink-50 dark:bg-ink-900/50;
-        }
-        table {
-            @apply rounded-xl overflow-hidden;
-        }
-        th, td {
-            @apply first:rounded-tl-xl last:rounded-tr-xl;
-        }
-        tr:last-child td:first-child {
-            @apply rounded-bl-xl;
-        }
-        tr:last-child td:last-child {
-            @apply rounded-br-xl;
+            @apply bg-amber-50 dark:bg-ink-800/70;
         }
 
         p.is-editor-empty:first-child::before {
@@ -172,4 +180,18 @@
             @apply text-ink-300 dark:text-ink-700 float-left h-0 pointer-events-none;
         }
     }
+
+    /* Modern Glassmorphism & UI Utilities */
+    .glass-panel {
+        @apply bg-white/80 dark:bg-ink-900/80 backdrop-blur-md border border-ink-200/80 dark:border-ink-800/80 shadow-xs;
+    }
+
+    .glass-card {
+        @apply bg-white/70 dark:bg-ink-900/70 backdrop-blur-sm border border-ink-200/60 dark:border-ink-800/60 hover:bg-white dark:hover:bg-ink-900 transition-all duration-200;
+    }
+
+    .skeleton-pulse {
+        @apply animate-pulse bg-ink-200/60 dark:bg-ink-800/60 rounded-md;
+    }
 }
+

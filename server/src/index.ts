@@ -18,6 +18,16 @@ await connectDB();
 // ── Top-level app (static files + API) ──────────────
 const root = new Hono();
 
+root.use(
+  "*",
+  cors({
+    origin: (origin) => origin || "*",
+    credentials: true,
+    allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+  }),
+);
+
 // Serve uploaded files (avatars, etc.) from ./uploads/
 root.use("/uploads/*", serveStatic({ root: "./" }));
 
@@ -26,19 +36,6 @@ const app = new Hono().basePath("/api/v1");
 
 app.use("*", logger());
 app.use("*", prettyJSON());
-app.use(
-  "*",
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5001",
-      "http://localhost:3001",
-    ],
-    credentials: true,
-    allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
-  }),
-);
 
 app.route("/auth", authRoutes);
 app.route("/users", userRoutes);

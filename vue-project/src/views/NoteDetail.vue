@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed, ref, watch } from "vue";
+import { onMounted, onUnmounted, computed, ref, watch } from "vue";
 import { useRoute, useRouter, RouterLink } from "vue-router";
 import {
     Pencil,
@@ -7,6 +7,11 @@ import {
     Star,
     ChevronDown,
     AlertTriangle,
+    FileSpreadsheet,
+    FileText,
+    Share2,
+    Check,
+    Link as LinkIcon,
 } from "lucide-vue-next";
 import { generateHTML } from "@tiptap/html";
 import StarterKit from "@tiptap/starter-kit";
@@ -23,6 +28,17 @@ const router = useRouter();
 const store = useNotesStore();
 
 const noteId = route.params.noteId as string;
+const menuRef = ref<HTMLElement | null>(null)
+
+// Close dropdown when clicking outside
+function handleClickOutside(e: MouseEvent) {
+    if (showShareMenu.value && menuRef.value && !menuRef.value.contains(e.target as Node)) {
+        showShareMenu.value = false
+    }
+}
+
+onMounted(() => document.addEventListener('click', handleClickOutside, true))
+onUnmounted(() => document.removeEventListener('click', handleClickOutside, true))
 const confirmDelete = ref(false);
 let confirmTimer: ReturnType<typeof setTimeout>;
 
@@ -70,6 +86,176 @@ async function doDelete() {
     clearTimeout(confirmTimer);
     await store.deleteNote(noteId);
     router.push("/app/notes");
+}
+
+// ── Export to Excel ──────────────────────────────────────────────────────────
+async function exportToExcel() {
+    const XLSX = await import('xlsx')
+    const content = store.activeNote?.content
+    if (!content) return
+
+    let data: any[][] = []
+
+    try {
+        const json = JSON.parse(content)
+        const findTables = (nodes: any[]): boolean => {
+            for (const node of nodes) {
+                if (node.type === 'table') {
+                    for (const rowNode of node.content || []) {
+                        if (rowNode.type === 'table_row') {
+                            const row: any[] = []
+                            for (const cell of rowNode.content || []) {
+                                if (cell.type === 'table_cell' || cell.type === 'table_header') {
+                                    let cellText = ''
+                                    const getText = (n: any) => {
+                                        if (n.text) cellText += n.text
+                                        if (n.content) n.content.forEach(getText)
+                                    }
+                                    if (cell.content) cell.content.forEach(getText)
+                                    row.push(cellText)
+                                }
+                            }
+                            data.push(row)
+                        }
+                    }
+                    return true
+                }
+                if (node.content && findTables(node.content)) return true
+            }
+            return false
+        }
+        findTables(json.content || json)
+    } catch {}
+
+    // Fallback: plain text
+    if (data.length === 0) {
+        const text = store.activeNote?.content || ''
+        const lines = text.split('\n').filter(l => l.trim())
+        data = lines.map(line => [line])
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Notes')
+    XLSX.writeFile(wb, `${store.activeNote?.title || 'note'}.xlsx`)
+}
+
+// ── Export to PDF ────────────────────────────────────────────────────────────
+async function exportToPDF() {
+    const { default: jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
+    const doc = new jsPDF()
+
+    // Title
+    doc.setFontSize(20)
+    doc.setTextColor(26, 26, 26)
+    doc.text(store.activeNote?.title || 'Untitled', 20, 20)
+
+    const content = store.activeNote?.content
+    if (!content) {
+        doc.save(`${store.activeNote?.title || 'note'}.pdf`)
+        return
+    }
+
+    let yPos = 35
+
+    try {
+        const json = JSON.parse(content)
+        const findTables = (nodes: any[]): boolean => {
+            for (const node of nodes) {
+                if (node.type === 'table') {
+                    const headRows: any[][] = []
+                    const bodyRows: any[][] = []
+                    let isHeader = true
+
+                    for (const rowNode of node.content || []) {
+                        if (rowNode.type === 'table_row') {
+                            const row: any[] = []
+                            for (const cell of rowNode.content || []) {
+                                if (cell.type === 'table_cell' || cell.type === 'table_header') {
+                                    let cellText = ''
+                                    const getText = (n: any) => {
+                                        if (n.text) cellText += n.text
+                                        if (n.content) n.content.forEach(getText)
+                                    }
+                                    if (cell.content) cell.content.forEach(getText)
+                                    row.push(cellText)
+                                }
+                            }
+                            if (isHeader) {
+                                headRows.push(row)
+                                isHeader = false
+                            } else {
+                                bodyRows.push(row)
+                            }
+                        }
+                    }
+
+                    autoTable(doc, {
+                        head: headRows.length > 0 ? headRows : [bodyRows[0] || []],
+                        body: headRows.length > 0 ? bodyRows : bodyRows.slice(1),
+                        startY: yPos,
+                        margin: { left: 20, right: 20 },
+                        theme: 'grid',
+                        headStyles: { fillColor: [45, 45, 45], textColor: [255, 255, 255] },
+                        alternateRowStyles: { fillColor: [245, 245, 245] },
+                    })
+                    // @ts-ignore
+                    yPos = doc.lastAutoTable?.finalY + 15 || yPos + 30
+                    return true
+                }
+                if (node.content && findTables(node.content)) return true
+            }
+            return false
+        }
+        const hadTables = findTables(json.content || json)
+
+        // Plain text if no tables found
+        if (!hadTables) {
+            const text = store.activeNote?.content || ''
+            doc.setFontSize(11)
+            doc.setTextColor(80, 80, 80)
+            const lines = doc.splitTextToSize(text, 170)
+            doc.text(lines, 20, yPos)
+        }
+    } catch (e) {
+        // Fallback on error
+        doc.setFontSize(11)
+        doc.setTextColor(80, 80, 80)
+        const lines = doc.splitTextToSize(content, 170)
+        doc.text(lines, 20, yPos)
+    }
+
+    doc.save(`${store.activeNote?.title || 'note'}.pdf`)
+}
+
+// ── Share note ───────────────────────────────────────────────────────────────
+const showShareMenu = ref(false)
+const copied = ref(false)
+
+async function shareNote() {
+    const title = store.activeNote?.title || 'Note'
+    const url = window.location.href
+
+    if (navigator.share) {
+        try {
+            await navigator.share({ title, url })
+        } catch {}
+    } else {
+        // Fallback: copy link
+        await navigator.clipboard.writeText(url)
+        copied.value = true
+        setTimeout(() => { copied.value = false }, 2000)
+    }
+    showShareMenu.value = false
+}
+
+function copyContent() {
+    const text = store.activeNote?.content || ''
+    navigator.clipboard.writeText(text)
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 2000)
+    showShareMenu.value = false
 }
 </script>
 
@@ -142,11 +328,54 @@ async function doDelete() {
                     <Trash2 :size="15" />
                 </button>
 
-                <button
-                    class="p-1.5 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors text-ink-300 dark:text-ink-700"
-                >
-                    <ChevronDown :size="16" />
-                </button>
+                <!-- More actions dropdown -->
+                <div class="relative" ref="menuRef">
+                    <button
+                        @click="showShareMenu = !showShareMenu"
+                        class="p-1.5 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors text-ink-300 dark:text-ink-700"
+                    >
+                        <ChevronDown :size="16" />
+                    </button>
+
+                    <!-- Dropdown menu -->
+                    <Transition name="dropdown">
+                        <div
+                            v-if="showShareMenu"
+                            class="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-700 rounded-xl shadow-lg py-1 z-50"
+        
+                        >
+                            <button
+                                @click="exportToExcel"
+                                class="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-ink-700 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
+                            >
+                                <FileSpreadsheet :size="15" class="text-emerald-600 dark:text-emerald-400" />
+                                Export to Excel
+                            </button>
+                            <button
+                                @click="exportToPDF"
+                                class="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-ink-700 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
+                            >
+                                <FileText :size="15" class="text-red-500 dark:text-red-400" />
+                                Export to PDF
+                            </button>
+                            <div class="h-px bg-ink-200 dark:bg-ink-700 my-1" />
+                            <button
+                                @click="shareNote"
+                                class="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-ink-700 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
+                            >
+                                <Share2 :size="15" class="text-amber-500" />
+                                Share Link
+                            </button>
+                            <button
+                                @click="copyContent"
+                                class="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-ink-700 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
+                            >
+                                <LinkIcon :size="15" class="text-ink-400" />
+                                Copy Content
+                            </button>
+                        </div>
+                    </Transition>
+                </div>
             </div>
         </div>
 
@@ -206,5 +435,18 @@ async function doDelete() {
 .confirm-leave-to {
     opacity: 0;
     transform: scale(0.95);
+}
+
+/* Dropdown animation */
+.dropdown-enter-active,
+.dropdown-leave-active {
+    transition:
+        opacity 0.15s ease,
+        transform 0.15s ease;
+}
+.dropdown-enter-from,
+.dropdown-leave-to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
 }
 </style>

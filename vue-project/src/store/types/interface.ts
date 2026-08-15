@@ -12,8 +12,8 @@ export interface User {
 export interface Note {
   _id: string;
   userId: string;
-  workspaceId?: string | null;
-  folderId?: string | null;
+  workspaceId?: string | { _id: string; name: string; icon?: string } | null;
+  folderId?: string | { _id: string; name: string } | null;
   title: string;
   content: string; // Tiptap JSON stringified
   slug?: string | null;

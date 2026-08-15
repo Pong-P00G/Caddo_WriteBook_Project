@@ -274,22 +274,22 @@ function clearSelection() {
             >
                 <!-- Loading -->
                 <template v-if="store.loading">
-                    <div v-if="viewMode === 'list'" class="space-y-px">
+                    <div v-if="viewMode === 'list'" class="space-y-3">
                         <div
                             v-for="n in 6"
                             :key="n"
-                            class="h-14 bg-ink-100 dark:bg-ink-800 rounded-lg animate-pulse"
+                            class="h-16 skeleton-pulse"
                             :style="{ opacity: 1 - n * 0.12 }"
                         />
                     </div>
                     <div
                         v-else
-                        class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+                        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
                     >
                         <div
                             v-for="n in 8"
                             :key="n"
-                            class="h-48 bg-ink-100 dark:bg-ink-800 rounded-xl animate-pulse"
+                            class="h-52 skeleton-pulse"
                             :style="{ opacity: 1 - n * 0.1 }"
                         />
                     </div>
@@ -367,68 +367,18 @@ function clearSelection() {
                             >
                                 {{ group.label }}
                             </p>
-                            <ul class="space-y-px">
-                                <li
+                            <div class="space-y-2">
+                                <NoteCard
                                     v-for="note in group.notes"
                                     :key="note._id"
-                                    @click="
-                                        isSelectionMode
-                                            ? toggleNoteSelection(note._id)
-                                            : router.push(`/app/notes/${note._id}`)
-                                    "
-                                    @dblclick.stop="
-                                        isSelectionMode = true;
-                                        toggleNoteSelection(note._id);
-                                    "
-                                    class="group relative flex items-center gap-4 px-3 py-3 rounded-lg cursor-pointer hover:bg-ink-50 dark:hover:bg-ink-900 transition-colors"
-                                    :class="{
-                                        'bg-ink-100 dark:bg-ink-800': selectedNotes.has(note._id)
-                                    }"
-                                >
-                                    <div
-                                        v-if="isSelectionMode"
-                                        @click.stop="toggleNoteSelection(note._id)"
-                                        class="w-5 h-5 rounded border border-ink-300 dark:border-ink-600 flex items-center justify-center shrink-0 cursor-pointer hover:border-ink-500 dark:hover:border-ink-400 transition-colors"
-                                        :class="{
-                                            'bg-amber-500 border-amber-500': selectedNotes.has(note._id)
-                                        }"
-                                    >
-                                        <Check
-                                            v-if="selectedNotes.has(note._id)"
-                                            :size="14"
-                                            class="text-white"
-                                        />
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center gap-2">
-                                            <h3
-                                                class="text-sm font-ui font-medium text-ink-900 dark:text-ink-100 truncate"
-                                            >
-                                                {{ note.title }}
-                                            </h3>
-                                            <Star
-                                                v-if="note.isFavorite"
-                                                :size="10"
-                                                class="text-amber-500 fill-amber-500 shrink-0"
-                                            />
-                                        </div>
-                                        <p
-                                            class="text-xs text-ink-400 dark:text-ink-600 truncate mt-0.5"
-                                        >
-                                            {{
-                                                preview(note.content) ||
-                                                "Empty note"
-                                            }}
-                                        </p>
-                                    </div>
-                                    <span
-                                        class="text-xs text-ink-300 dark:text-ink-700 shrink-0 tabular-nums"
-                                        >{{
-                                            relativeTime(note.updatedAt)
-                                        }}</span
-                                    >
-                                </li>
-                            </ul>
+                                    :note="note"
+                                    view-mode="list"
+                                    :is-selected="selectedNotes.has(note._id)"
+                                    :is-selection-mode="isSelectionMode"
+                                    @toggle-selection="toggleNoteSelection"
+                                    @enter-selection-mode="(id) => { isSelectionMode = true; toggleNoteSelection(id); }"
+                                />
+                            </div>
                         </div>
                     </div>
                 </Transition>

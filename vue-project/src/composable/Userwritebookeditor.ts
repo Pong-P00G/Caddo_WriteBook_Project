@@ -42,6 +42,22 @@ const ImageExtension = Extension.create({
   },
 })
 
+// Extension to handle Tab key pressing -> insert 4 spaces by default
+const TabKeyExtension = Extension.create({
+  name: 'tabKeyExtension',
+
+  addKeyboardShortcuts() {
+    return {
+      Tab: () => {
+        if (this.editor.isActive('listItem') || this.editor.isActive('taskItem')) {
+          return false
+        }
+        return this.editor.commands.insertContent('    ')
+      },
+    }
+  },
+})
+
 export function useWritebookEditor(
   initialContent: string = '',
   onUpdate?: (content: string) => void
@@ -82,6 +98,7 @@ export function useWritebookEditor(
       TableCell,
       TableHeader,
       ImageExtension,
+      TabKeyExtension,
     ],
     editorProps: {
       attributes: { class: 'tiptap min-h-[400px] p-0' },
@@ -107,12 +124,28 @@ export function useWritebookEditor(
   function setContent(content: string) {
     if (!editor.value) return
     try {
-      const parsed = content ? JSON.parse(content) : { type: 'doc', content: [{ type: 'paragraph' }] }
+      let parsed;
+      if (content && content.trim().startsWith('{')) {
+        parsed = JSON.parse(content)
+      } else if (content) {
+        parsed = {
+          type: 'doc',
+          content: content.split('\n').map(line => ({
+            type: 'paragraph',
+            content: line ? [{ type: 'text', text: line }] : []
+          }))
+        }
+      } else {
+        parsed = { type: 'doc', content: [{ type: 'paragraph' }] }
+      }
       editor.value.commands.setContent(parsed, { emitUpdate: false })
       wordCount.value = editor.value.storage.characterCount.words()
     } catch (e) {
       console.error('Failed to parse content:', e)
-      editor.value.commands.setContent({ type: 'doc', content: [{ type: 'paragraph' }] }, { emitUpdate: false })
+      const fallbackNodes = content 
+        ? content.split('\n').map(line => ({ type: 'paragraph', content: line ? [{ type: 'text', text: line }] : [] }))
+        : [{ type: 'paragraph' }]
+      editor.value.commands.setContent({ type: 'doc', content: fallbackNodes }, { emitUpdate: false })
     }
   }
 
