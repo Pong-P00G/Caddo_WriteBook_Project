@@ -7,6 +7,7 @@ class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
   late final Dio dio;
   final _storage = const FlutterSecureStorage();
+  static VoidCallback? onUnauthorized;
 
   factory ApiClient() => _instance;
 
@@ -62,7 +63,11 @@ class ApiClient {
           }
           return handler.next(options);
         },
-        onError: (error, handler) {
+        onError: (error, handler) async {
+          if (error.response?.statusCode == 401) {
+            await clearToken();
+            onUnauthorized?.call();
+          }
           return handler.next(error);
         },
       ),

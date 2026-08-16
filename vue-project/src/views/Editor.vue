@@ -218,42 +218,42 @@ function handleEditorClick(e: MouseEvent) {
   <div class="h-screen flex flex-col bg-white dark:bg-ink-950">
 
     <!-- ── Top bar ────────────────────────────────────────── -->
-    <header class="flex items-center justify-between px-6 py-3 bg-white dark:bg-ink-950 shrink-0">
+    <header class="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 bg-white dark:bg-ink-950 shrink-0">
       <!-- Left: back + save status -->
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 sm:gap-3">
         <RouterLink
           :to="`/app/notes/${noteId}`"
-          class="text-ink-400 dark:text-ink-600 hover:text-ink-700 dark:hover:text-ink-300 transition-colors"
+          class="p-1 -ml-1 text-ink-400 dark:text-ink-600 hover:text-ink-700 dark:hover:text-ink-300 transition-colors"
           title="Back to note"
         >
           <ArrowLeft :size="16" />
         </RouterLink>
 
-        <span class="text-sm font-ui text-ink-400 dark:text-ink-600 flex items-center gap-1.5">
-          <Loader2 v-if="isSaving" :size="12" class="animate-spin text-amber-500" />
+        <span class="text-xs sm:text-sm font-ui text-ink-400 dark:text-ink-600 flex items-center gap-1.5 truncate max-w-30 sm:max-w-none">
+          <Loader2 v-if="isSaving" :size="12" class="animate-spin text-amber-500 shrink-0" />
           {{ isSaving ? 'Saving…' : savedLabel }}
         </span>
       </div>
 
       <!-- Right: star + chevron + export -->
-      <div class="flex items-center gap-1.5">
+      <div class="flex items-center gap-1">
         <button
           @click="exportToExcel"
-          class="p-1.5 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors text-ink-300 dark:text-ink-700 hover:text-amber-500"
+          class="p-1.5 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors text-ink-300 dark:text-ink-700 hover:text-amber-500 cursor-pointer"
           title="Export to Excel"
         >
           <FileSpreadsheet :size="16" />
         </button>
         <button
           @click="exportToPDF"
-          class="p-1.5 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors text-ink-300 dark:text-ink-700 hover:text-amber-500"
+          class="p-1.5 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors text-ink-300 dark:text-ink-700 hover:text-amber-500 cursor-pointer"
           title="Export to PDF"
         >
           <FileDown :size="16" />
         </button>
         <button
           @click="toggleFavorite"
-          class="p-1.5 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
+          class="p-1.5 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors cursor-pointer"
           :title="isFavorite ? 'Remove from favorites' : 'Add to favorites'"
         >
           <Star
@@ -263,7 +263,7 @@ function handleEditorClick(e: MouseEvent) {
               : 'text-ink-300 dark:text-ink-700 hover:text-amber-400'"
           />
         </button>
-        <button class="p-1.5 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors text-ink-300 dark:text-ink-700 hover:text-ink-600 dark:hover:text-ink-400">
+        <button class="p-1.5 rounded-lg hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors text-ink-300 dark:text-ink-700 hover:text-ink-600 dark:hover:text-ink-400 cursor-pointer">
           <ChevronDown :size="16" />
         </button>
       </div>
@@ -273,13 +273,13 @@ function handleEditorClick(e: MouseEvent) {
     <div class="h-px bg-ink-100 dark:bg-ink-800 shrink-0" />
 
     <!-- ── Toolbar ────────────────────────────────────────── -->
-    <div class="px-6 py-2 border-b border-ink-100 dark:border-ink-800 bg-white dark:bg-ink-950 shrink-0">
+    <div class="px-3 sm:px-6 py-1.5 sm:py-2 border-b border-ink-100 dark:border-ink-800 bg-white dark:bg-ink-950 shrink-0 overflow-x-auto">
       <EditorToolbar :editor="editor" />
     </div>
 
     <!-- ── Scrollable content ─────────────────────────────── -->
     <div class="flex-1 overflow-y-auto bg-white dark:bg-ink-950">
-      <div class="max-w-2xl mx-auto px-8 pt-10 pb-24">
+      <div class="max-w-2xl mx-auto px-4 sm:px-8 pt-6 sm:pt-10 pb-24">
 
         <!-- Editable title -->
         <input
@@ -288,7 +288,7 @@ function handleEditorClick(e: MouseEvent) {
           @keydown="onTitleKeydown"
           type="text"
           placeholder="Untitled"
-          class="w-full mb-8 text-4xl font-display font-bold text-ink-950 dark:text-ink-50 bg-transparent border-none outline-none placeholder-ink-200 dark:placeholder-ink-700 leading-tight"
+          class="w-full mb-6 sm:mb-8 text-2xl sm:text-4xl font-display font-bold text-ink-950 dark:text-ink-50 bg-transparent border-none outline-none placeholder-ink-200 dark:placeholder-ink-700 leading-tight"
         />
 
         <!-- Tiptap content -->

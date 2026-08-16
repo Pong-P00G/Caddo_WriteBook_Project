@@ -3,6 +3,7 @@ import { onMounted, ref, computed } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 import {
     PenLine,
+    Plus,
     Star,
     Search,
     StickyNote,
@@ -11,6 +12,7 @@ import {
     List,
     Check,
     Trash2,
+    CheckSquare,
 } from "lucide-vue-next";
 import { useNotesStore } from "@/store/notes";
 import NoteCard from "@/components/NoteCard.vue";
@@ -27,7 +29,13 @@ function toggleSelectionMode() {
     isSelectionMode.value = !isSelectionMode.value;
     if (!isSelectionMode.value) {
         selectedNotes.value.clear();
+        selectedNotes.value = new Set();
     }
+}
+
+function selectAll() {
+    filtered.value.forEach((n) => selectedNotes.value.add(n._id));
+    selectedNotes.value = new Set(selectedNotes.value);
 }
 
 type ViewMode = "list" | "grid";
@@ -39,7 +47,21 @@ function setView(m: ViewMode) {
     localStorage.setItem("wb_notes_view", m);
 }
 
-onMounted(() => store.fetchNotes());
+onMounted(() => {
+    store.fetchNotes();
+    // Ctrl+N → new note keyboard shortcut
+    window.addEventListener('keydown', handleKeydown);
+});
+
+import { onUnmounted } from 'vue';
+const router2 = useRouter();
+onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
+function handleKeydown(e: KeyboardEvent) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        router2.push('/app/notes/new');
+    }
+}
 
 function onSearch() {
     clearTimeout(searchTimer);
@@ -152,8 +174,14 @@ function clearSelection() {
                         {{ selectedNotes.size }} note{{ selectedNotes.size !== 1 ? "s" : "" }} selected
                     </span>
                     <button
+                        @click="selectAll"
+                        class="text-sm text-ink-500 hover:text-ink-800 dark:hover:text-ink-200 font-ui underline transition-colors"
+                    >
+                        Select all
+                    </button>
+                    <button
                         @click="clearSelection"
-                        class="text-sm text-ink-500 hover:text-ink-800 dark:hover:text-ink-200 font-ui underline"
+                        class="text-sm text-ink-500 hover:text-ink-800 dark:hover:text-ink-200 font-ui underline transition-colors"
                     >
                         Clear
                     </button>
@@ -253,13 +281,19 @@ function clearSelection() {
                     </button>
                 </div>
 
-                <RouterLink
-                    to="/app/notes/new"
-                    class="flex items-center gap-1.5 px-3 py-1.5 bg-ink-900 dark:bg-amber-500 hover:bg-ink-700 dark:hover:bg-amber-600 text-white dark:text-ink-950 rounded-lg font-ui font-semibold text-xs transition-colors"
-                >
-                    <PenLine :size="13" />
-                    New Note
-                </RouterLink>
+                <div class="relative group/tooltip">
+                    <RouterLink
+                        to="/app/notes/new"
+                        class="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-ui font-semibold text-xs shadow-sm hover:shadow-amber-500/20 active:scale-[0.97] transition-all duration-150"
+                    >
+                        <Plus :size="14" class="stroke-[2.5]" />
+                        <span>New Note</span>
+                    </RouterLink>
+                    <!-- Keyboard shortcut tooltip -->
+                    <div class="tooltip whitespace-nowrap">
+                        New note <kbd class="ml-1 px-1 py-0.5 text-[9px] bg-white/20 rounded">Ctrl+N</kbd>
+                    </div>
+                </div>
                 </template>
             </div>
         </div>
@@ -339,6 +373,7 @@ function clearSelection() {
 
                 <!-- Grid -->
                 <Transition name="view" mode="out-in">
+                    <!-- Grid -->
                     <div
                         v-if="viewMode === 'grid' && filtered.length"
                         key="grid"
@@ -347,6 +382,7 @@ function clearSelection() {
                         <NoteCard
                             v-for="note in filtered"
                             :key="note._id"
+                            v-memo="[note._id, note.updatedAt, note.isFavorite, note.title, selectedNotes.has(note._id), isSelectionMode]"
                             :note="note"
                             :is-selected="selectedNotes.has(note._id)"
                             :is-selection-mode="isSelectionMode"
@@ -367,10 +403,15 @@ function clearSelection() {
                             >
                                 {{ group.label }}
                             </p>
-                            <div class="space-y-2">
+                            <TransitionGroup
+                                name="list-item"
+                                tag="div"
+                                class="space-y-2"
+                            >
                                 <NoteCard
                                     v-for="note in group.notes"
                                     :key="note._id"
+                                    v-memo="[note._id, note.updatedAt, note.isFavorite, note.title, selectedNotes.has(note._id), isSelectionMode]"
                                     :note="note"
                                     view-mode="list"
                                     :is-selected="selectedNotes.has(note._id)"
@@ -378,7 +419,7 @@ function clearSelection() {
                                     @toggle-selection="toggleNoteSelection"
                                     @enter-selection-mode="(id) => { isSelectionMode = true; toggleNoteSelection(id); }"
                                 />
-                            </div>
+                            </TransitionGroup>
                         </div>
                     </div>
                 </Transition>
@@ -395,5 +436,21 @@ function clearSelection() {
 .view-enter-from,
 .view-leave-to {
     opacity: 0;
+}
+
+/* List item stagger animation */
+.list-item-enter-active {
+    transition: all 0.2s ease;
+}
+.list-item-leave-active {
+    transition: all 0.15s ease;
+}
+.list-item-enter-from {
+    opacity: 0;
+    transform: translateY(-4px);
+}
+.list-item-leave-to {
+    opacity: 0;
+    transform: translateX(8px);
 }
 </style>

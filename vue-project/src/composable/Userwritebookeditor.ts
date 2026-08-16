@@ -6,6 +6,8 @@ import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
 import Highlight from '@tiptap/extension-highlight'
+import { TextStyle } from '@tiptap/extension-text-style'
+import { Color } from '@tiptap/extension-color'
 import TextAlign from '@tiptap/extension-text-align'
 import Subscript from '@tiptap/extension-subscript'
 import Superscript from '@tiptap/extension-superscript'
@@ -16,7 +18,7 @@ import { TableRow } from '@tiptap/extension-table-row'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { TableHeader } from '@tiptap/extension-table-header'
 import { Extension } from '@tiptap/core'
-import { ref, onBeforeUnmount } from 'vue'
+import { ref, watch, onBeforeUnmount } from 'vue'
 
 // Custom extension to handle image keyboard deletion
 const ImageExtension = Extension.create({
@@ -58,6 +60,20 @@ const TabKeyExtension = Extension.create({
   },
 })
 
+// Extension to guarantee Mod-z, Mod-Shift-z, and Mod-y keybinds for undo and redo
+const UndoRedoExtension = Extension.create({
+  name: 'undoRedoExtension',
+
+  addKeyboardShortcuts() {
+    return {
+      'Mod-z': () => this.editor.commands.undo(),
+      'Mod-y': () => this.editor.commands.redo(),
+      'Mod-Shift-z': () => this.editor.commands.redo(),
+      'Shift-Mod-z': () => this.editor.commands.redo(),
+    }
+  },
+})
+
 export function useWritebookEditor(
   initialContent: string = '',
   onUpdate?: (content: string) => void
@@ -65,6 +81,7 @@ export function useWritebookEditor(
   const wordCount     = ref(0)
   const isSaving      = ref(false)
   let autosaveTimer: ReturnType<typeof setTimeout>
+  let pendingContent: string | null = initialContent || null
 
   const editor = useEditor({
     content: initialContent || '',
@@ -87,6 +104,8 @@ export function useWritebookEditor(
       }),
       Link.configure({ openOnClick: false }),
       Underline,
+      TextStyle,
+      Color,
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Subscript,
@@ -99,6 +118,7 @@ export function useWritebookEditor(
       TableHeader,
       ImageExtension,
       TabKeyExtension,
+      UndoRedoExtension,
     ],
     editorProps: {
       attributes: { class: 'tiptap min-h-[400px] p-0' },
@@ -116,28 +136,101 @@ export function useWritebookEditor(
     },
   })
 
+  watch(editor, (ed) => {
+    if (ed && pendingContent !== null) {
+      setContent(pendingContent)
+      pendingContent = null
+    }
+  }, { immediate: true })
+
   onBeforeUnmount(() => {
     clearTimeout(autosaveTimer)
     editor.value?.destroy()
   })
 
   function setContent(content: string) {
-    if (!editor.value) return
+    if (!editor.value) {
+      pendingContent = content
+      return
+    }
+
     try {
-      let parsed;
-      if (content && content.trim().startsWith('{')) {
+      let parsed: any;
+      if (content && typeof content === 'string' && content.trim().startsWith('{')) {
         parsed = JSON.parse(content)
-      } else if (content) {
-        parsed = {
-          type: 'doc',
-          content: content.split('\n').map(line => ({
-            type: 'paragraph',
-            content: line ? [{ type: 'text', text: line }] : []
-          }))
+        // Unwrap double-encoded or stringified JSON inside paragraph nodes
+        while (
+          parsed &&
+          typeof parsed === 'object' &&
+          parsed.type === 'doc' &&
+          Array.isArray(parsed.content) &&
+          parsed.content.length === 1 &&
+          parsed.content[0]?.type === 'paragraph' &&
+          Array.isArray(parsed.content[0]?.content) &&
+          parsed.content[0].content.length === 1 &&
+          typeof parsed.content[0].content[0]?.text === 'string' &&
+          parsed.content[0].content[0].text.trim().startsWith('{"type":"doc"')
+        ) {
+          try {
+            parsed = JSON.parse(parsed.content[0].content[0].text.trim())
+          } catch (_) {
+            break
+          }
         }
+      } else if (content && typeof content === 'string') {
+        // Strip any raw HTML tags like <color=...>, <mark...>, </mark>, </color>, <u>, <span>
+        const cleaned = content.replace(/<\/?(?:color|mark|span|u)(?:\s+[^>]*)?>/gi, '')
+        const lines = cleaned.split('\n')
+        const nodes: any[] = []
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (trimmed.startsWith('# ')) {
+            nodes.push({
+              type: 'heading',
+              attrs: { level: 1 },
+              content: [{ type: 'text', text: trimmed.substring(2) }]
+            })
+          } else if (trimmed.startsWith('## ')) {
+            nodes.push({
+              type: 'heading',
+              attrs: { level: 2 },
+              content: [{ type: 'text', text: trimmed.substring(3) }]
+            })
+          } else if (trimmed.startsWith('### ')) {
+            nodes.push({
+              type: 'heading',
+              attrs: { level: 3 },
+              content: [{ type: 'text', text: trimmed.substring(4) }]
+            })
+          } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            nodes.push({
+              type: 'bulletList',
+              content: [
+                {
+                  type: 'listItem',
+                  content: [
+                    {
+                      type: 'paragraph',
+                      content: [{ type: 'text', text: trimmed.substring(2) }]
+                    }
+                  ]
+                }
+              ]
+            })
+          } else {
+            nodes.push({
+              type: 'paragraph',
+              content: line ? [{ type: 'text', text: line }] : []
+            })
+          }
+        }
+
+        parsed = { type: 'doc', content: nodes.length ? nodes : [{ type: 'paragraph' }] }
       } else {
         parsed = { type: 'doc', content: [{ type: 'paragraph' }] }
       }
+
       editor.value.commands.setContent(parsed, { emitUpdate: false })
       wordCount.value = editor.value.storage.characterCount.words()
     } catch (e) {

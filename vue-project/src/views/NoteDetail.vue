@@ -12,11 +12,19 @@ import {
     Share2,
     Check,
     Link as LinkIcon,
+    Clock,
 } from "lucide-vue-next";
 import { generateHTML } from "@tiptap/html";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
+import Underline from "@tiptap/extension-underline";
+import Highlight from "@tiptap/extension-highlight";
+import TextAlign from "@tiptap/extension-text-align";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
@@ -37,8 +45,20 @@ function handleClickOutside(e: MouseEvent) {
     }
 }
 
-onMounted(() => document.addEventListener('click', handleClickOutside, true))
-onUnmounted(() => document.removeEventListener('click', handleClickOutside, true))
+onMounted(() => {
+    document.addEventListener('click', handleClickOutside, true);
+    // Reading progress bar
+    const scrollEl = document.querySelector('.note-scroll-area') as HTMLElement | null;
+    if (scrollEl) {
+        scrollEl.addEventListener('scroll', updateReadingProgress);
+    } else {
+        window.addEventListener('scroll', updateReadingProgress);
+    }
+});
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside, true);
+    window.removeEventListener('scroll', updateReadingProgress);
+});
 const confirmDelete = ref(false);
 let confirmTimer: ReturnType<typeof setTimeout>;
 
@@ -50,11 +70,25 @@ watch(() => route.params.noteId, (newId) => {
 const content = computed(() => {
     if (!store.activeNote?.content) return "";
     try {
-        return generateHTML(JSON.parse(store.activeNote.content), [
-            StarterKit.configure({ link: false }),
-            Image,
-            Link,
-            Table,
+        const json = typeof store.activeNote.content === 'string'
+            ? JSON.parse(store.activeNote.content)
+            : store.activeNote.content;
+        return generateHTML(json, [
+            StarterKit.configure({
+                heading: { levels: [1, 2, 3] },
+                link: false,
+                underline: false,
+            }),
+            Image.configure({ inline: false, allowBase64: true }),
+            Link.configure({ openOnClick: true }),
+            Underline,
+            Highlight.configure({ multicolor: true }),
+            TextAlign.configure({ types: ['heading', 'paragraph'] }),
+            Subscript,
+            Superscript,
+            TaskList,
+            TaskItem.configure({ nested: true }),
+            Table.configure({ resizable: false }),
             TableRow,
             TableCell,
             TableHeader,
@@ -63,6 +97,38 @@ const content = computed(() => {
         return store.activeNote.content;
     }
 });
+
+// Word count + read time
+const wordCount = computed((): number => {
+    if (!store.activeNote?.content) return 0;
+    try {
+        const json = JSON.parse(store.activeNote.content);
+        function extractText(nodes: any[]): string {
+            return nodes.reduce((acc: string, n: any) => {
+                if (n.type === 'text') return acc + ' ' + (n.text ?? '');
+                if (n.content) return acc + extractText(n.content);
+                return acc;
+            }, '');
+        }
+        return extractText(json.content ?? []).trim().split(/\s+/).filter(Boolean).length;
+    } catch {
+        return store.activeNote.content.split(/\s+/).filter(Boolean).length;
+    }
+});
+const readTime = computed((): string => {
+    const mins = Math.ceil(wordCount.value / 200);
+    return mins < 1 ? '< 1 min' : `${mins} min`;
+});
+
+// Reading progress
+const readingProgress = ref(0);
+function updateReadingProgress() {
+    const scrollEl = document.querySelector('.note-scroll-area') as HTMLElement | null;
+    const el = scrollEl || document.documentElement;
+    const scrollTop = el.scrollTop;
+    const scrollHeight = el.scrollHeight - el.clientHeight;
+    readingProgress.value = scrollHeight > 0 ? Math.round((scrollTop / scrollHeight) * 100) : 0;
+}
 
 function relativeTime(d: string): string {
     const diff = Date.now() - new Date(d).getTime();
@@ -260,16 +326,29 @@ function copyContent() {
 </script>
 
 <template>
-    <div class="flex flex-col h-full bg-white dark:bg-ink-950">
-        <!-- ── Top bar (matches image: "Saved 2h ago" left, star + edit + delete right) ── -->
+    <div class="flex flex-col h-full bg-white dark:bg-ink-950 relative">
+        <!-- Reading progress bar -->
+        <div
+            class="absolute top-0 left-0 h-0.5 bg-amber-500 z-20 transition-[width] duration-150 pointer-events-none"
+            :style="{ width: readingProgress + '%' }"
+        />
+
+        <!-- ── Top bar ── -->
         <div class="flex items-center justify-between px-8 py-3 shrink-0">
-            <span class="text-sm text-ink-400 dark:text-ink-600 font-ui">
-                {{
-                    store.activeNote
-                        ? relativeTime(store.activeNote.updatedAt)
-                        : "…"
-                }}
-            </span>
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-ink-400 dark:text-ink-600 font-ui">
+                    {{
+                        store.activeNote
+                            ? relativeTime(store.activeNote.updatedAt)
+                            : "…"
+                    }}
+                </span>
+                <!-- Word count + read time -->
+                <div v-if="store.activeNote && wordCount > 0" class="hidden sm:flex items-center gap-1 text-[11px] text-ink-300 dark:text-ink-700 font-ui">
+                    <Clock :size="11" />
+                    <span>{{ wordCount }} words · {{ readTime }} read</span>
+                </div>
+            </div>
 
             <div class="flex items-center gap-1" v-if="store.activeNote">
                 <!-- Star -->
@@ -383,18 +462,18 @@ function copyContent() {
         <div class="h-px bg-ink-200 dark:bg-ink-800 shrink-0" />
 
         <!-- ── Content ── -->
-        <div class="flex-1 overflow-y-auto">
+        <div class="flex-1 overflow-y-auto note-scroll-area" @scroll="updateReadingProgress">
             <!-- Loading -->
             <div
                 v-if="store.loading && !store.activeNote"
-                class="max-w-2xl mx-auto px-8 py-10 animate-pulse space-y-5"
+                class="max-w-2xl mx-auto px-8 py-10 space-y-5"
             >
-                <div class="h-12 bg-ink-100 dark:bg-ink-800 rounded w-2/3" />
+                <div class="h-12 skeleton-pulse rounded-xl w-2/3" />
                 <div class="space-y-3 mt-6">
                     <div
                         v-for="i in 5"
                         :key="i"
-                        class="h-4 bg-ink-100 dark:bg-ink-800 rounded"
+                        class="h-4 skeleton-pulse rounded"
                         :style="{ width: `${95 - i * 8}%` }"
                     />
                 </div>

@@ -2,14 +2,92 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
+  void _showThemeSelector(BuildContext context, WidgetRef ref, ThemeMode currentMode) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Select Theme',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: const Icon(LucideIcons.sun, color: AppColors.amber500),
+                  title: const Text('Light Mode'),
+                  trailing: currentMode == ThemeMode.light
+                      ? const Icon(LucideIcons.check, color: AppColors.amber500, size: 20)
+                      : null,
+                  onTap: () {
+                    ref.read(themeProvider.notifier).setThemeMode(ThemeMode.light);
+                    Navigator.pop(ctx);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(LucideIcons.moon, color: AppColors.amber500),
+                  title: const Text('Dark Mode'),
+                  trailing: currentMode == ThemeMode.dark
+                      ? const Icon(LucideIcons.check, color: AppColors.amber500, size: 20)
+                      : null,
+                  onTap: () {
+                    ref.read(themeProvider.notifier).setThemeMode(ThemeMode.dark);
+                    Navigator.pop(ctx);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(LucideIcons.smartphone, color: AppColors.amber500),
+                  title: const Text('System Default'),
+                  trailing: currentMode == ThemeMode.system
+                      ? const Icon(LucideIcons.check, color: AppColors.amber500, size: 20)
+                      : null,
+                  onTap: () {
+                    ref.read(themeProvider.notifier).setThemeMode(ThemeMode.system);
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currentThemeMode = ref.watch(themeProvider);
+
+    String themeSubtitle = 'System Default';
+    if (currentThemeMode == ThemeMode.light) {
+      themeSubtitle = 'Light Mode';
+    } else if (currentThemeMode == ThemeMode.dark) {
+      themeSubtitle = 'Dark Mode';
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -27,20 +105,27 @@ class SettingsScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.ink900 : Colors.white,
+                Material(
+                  color: isDark ? AppColors.ink900 : Colors.white,
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
+                    side: BorderSide(
                       color: isDark ? AppColors.ink800 : AppColors.ink200.withAlpha(204),
                     ),
                   ),
+                  clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
                       ListTile(
-                        leading: const Icon(LucideIcons.moon, size: 20),
+                        leading: Icon(
+                          isDark ? LucideIcons.moon : LucideIcons.sun,
+                          size: 20,
+                          color: AppColors.amber500,
+                        ),
                         title: const Text('Theme'),
-                        subtitle: Text(isDark ? 'Dark Mode' : 'Light Mode'),
+                        subtitle: Text(themeSubtitle),
+                        trailing: const Icon(LucideIcons.chevronRight, size: 18, color: AppColors.ink400),
+                        onTap: () => _showThemeSelector(context, ref, currentThemeMode),
                       ),
                       const Divider(height: 1),
                       const ListTile(

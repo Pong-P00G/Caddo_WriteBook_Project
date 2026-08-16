@@ -438,7 +438,16 @@ class TipTapRenderer extends StatelessWidget {
   Widget _buildListItem(BuildContext context, dynamic item, {required bool isOrdered, int index = 1}) {
     if (item is! Map) return const SizedBox.shrink();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final content = item['content'] as List?;
+    final spans = <InlineSpan>[];
+    if (content != null) {
+      for (final child in content) {
+        if (child is Map && child['content'] is List) {
+          spans.addAll(_buildInlineContent(context, child['content']));
+        }
+      }
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
@@ -446,22 +455,27 @@ class TipTapRenderer extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 24,
+            width: 22,
             child: Text(
               isOrdered ? '$index.' : '•',
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 15,
+                fontSize: isOrdered ? 14 : 18,
                 color: AppColors.amber500,
+                height: 1.4,
               ),
             ),
           ),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: content != null
-                  ? content.map((child) => _buildNode(context, child)).toList()
-                  : [const SizedBox.shrink()],
+            child: SelectableText.rich(
+              TextSpan(
+                children: spans,
+                style: TextStyle(
+                  fontSize: 15,
+                  height: 1.5,
+                  color: isDark ? AppColors.ink100 : AppColors.ink900,
+                ),
+              ),
             ),
           ),
         ],
@@ -475,24 +489,41 @@ class TipTapRenderer extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final checked = (item['attrs'] as Map?)?['checked'] == true;
     final content = item['content'] as List?;
+    final spans = <InlineSpan>[];
+    if (content != null) {
+      for (final child in content) {
+        if (child is Map && child['content'] is List) {
+          spans.addAll(_buildInlineContent(context, child['content']));
+        }
+      }
+    }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            checked ? LucideIcons.checkSquare : LucideIcons.square,
-            size: 18,
-            color: checked ? AppColors.amber500 : (isDark ? AppColors.ink500 : AppColors.ink400),
+          Padding(
+            padding: const EdgeInsets.only(top: 2, right: 8),
+            child: Icon(
+              checked ? LucideIcons.checkSquare : LucideIcons.square,
+              size: 16,
+              color: checked ? AppColors.amber500 : (isDark ? AppColors.ink500 : AppColors.ink400),
+            ),
           ),
-          const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: content != null
-                  ? content.map((child) => _buildNode(context, child)).toList()
-                  : [const SizedBox.shrink()],
+            child: SelectableText.rich(
+              TextSpan(
+                children: spans,
+                style: TextStyle(
+                  fontSize: 15,
+                  height: 1.5,
+                  color: checked
+                      ? (isDark ? AppColors.ink500 : AppColors.ink400)
+                      : (isDark ? AppColors.ink100 : AppColors.ink900),
+                  decoration: checked ? TextDecoration.lineThrough : null,
+                ),
+              ),
             ),
           ),
         ],
@@ -534,6 +565,17 @@ class TipTapRenderer extends StatelessWidget {
                 break;
               case 'underline':
                 style = style.copyWith(decoration: TextDecoration.underline);
+                break;
+              case 'strike':
+              case 'strikethrough':
+                style = style.copyWith(decoration: TextDecoration.lineThrough);
+                break;
+              case 'textStyle':
+                final attrs = mark['attrs'] as Map?;
+                final colorHex = attrs?['color'] as String?;
+                if (colorHex != null && colorHex.isNotEmpty) {
+                  style = style.copyWith(color: _parseHexColor(colorHex));
+                }
                 break;
               case 'highlight':
                 final attrs = mark['attrs'] as Map?;

@@ -31,54 +31,102 @@ class NoteModel {
 
   String get cleanContent {
     if (content.isEmpty) return '';
+    String result;
+
     if (!content.trim().startsWith('{')) {
-      return content;
-    }
+      result = content;
+    } else {
+      try {
+        dynamic parsed = jsonDecode(content);
 
-    try {
-      final parsed = jsonDecode(content);
-      final buffer = StringBuffer();
-
-      void extractText(dynamic node) {
-        if (node is Map) {
-          final type = node['type'] as String?;
-
-          if (type == 'image') {
-            final attrs = node['attrs'] as Map?;
-            final src = attrs?['src'] as String? ?? '';
-            final alt = attrs?['alt'] as String? ?? 'Image';
-            final width = attrs?['width'] as String? ?? '100%';
-            final align = attrs?['align'] as String? ?? 'center';
-            if (src.isNotEmpty) {
-              buffer.write('\n![$alt|$width|$align]($src)\n');
-            }
-            return;
-          }
-
-          if (type == 'text' && node.containsKey('text')) {
-            buffer.write(node['text']);
-          }
-          if (node.containsKey('content') && node['content'] is List) {
-            final isBlock = type == 'paragraph' || type == 'heading' || type == 'codeBlock';
-            for (final child in node['content']) {
-              extractText(child);
-            }
-            if (isBlock) {
-              buffer.write('\n');
-            }
-          }
-        } else if (node is List) {
-          for (final item in node) {
-            extractText(item);
+        // Unwrap any nested or double-encoded doc
+        while (parsed is Map &&
+            parsed['type'] == 'doc' &&
+            parsed['content'] is List &&
+            (parsed['content'] as List).length == 1 &&
+            (parsed['content'] as List)[0] is Map &&
+            (parsed['content'] as List)[0]['type'] == 'paragraph' &&
+            (parsed['content'] as List)[0]['content'] is List &&
+            ((parsed['content'] as List)[0]['content'] as List).length == 1 &&
+            ((parsed['content'] as List)[0]['content'] as List)[0] is Map &&
+            ((parsed['content'] as List)[0]['content'] as List)[0]['text'] is String &&
+            (((parsed['content'] as List)[0]['content'] as List)[0]['text'] as String).trim().startsWith('{"type":"doc"')) {
+          try {
+            parsed = jsonDecode((((parsed['content'] as List)[0]['content'] as List)[0]['text'] as String).trim());
+          } catch (_) {
+            break;
           }
         }
-      }
 
-      extractText(parsed);
-      return buffer.toString().trim();
-    } catch (_) {
-      return content;
+        final buffer = StringBuffer();
+
+        void extractText(dynamic node, {bool insideList = false}) {
+          if (node is Map) {
+            final type = node['type'] as String?;
+
+            if (type == 'image') {
+              final attrs = node['attrs'] as Map?;
+              final src = attrs?['src'] as String? ?? '';
+              final alt = attrs?['alt'] as String? ?? 'Image';
+              final width = attrs?['width'] as String? ?? '100%';
+              final align = attrs?['align'] as String? ?? 'center';
+              if (src.isNotEmpty) {
+                buffer.write('\n![$alt|$width|$align]($src)\n');
+              }
+              return;
+            }
+
+            if (type == 'heading') {
+              final level = (node['attrs'] as Map?)?['level'] as int? ?? 1;
+              buffer.write('${'#' * level} ');
+            } else if (type == 'blockquote') {
+              buffer.write('> ');
+            } else if (type == 'listItem') {
+              buffer.write('- ');
+            } else if (type == 'taskItem') {
+              final checked = (node['attrs'] as Map?)?['checked'] == true;
+              buffer.write(checked ? '- [x] ' : '- [ ] ');
+            }
+
+            if (type == 'text' && node.containsKey('text')) {
+              buffer.write(node['text'] ?? '');
+            }
+
+            if (node.containsKey('content') && node['content'] is List) {
+              final isList = type == 'listItem' || type == 'taskItem' || insideList;
+              final isBlock = type == 'paragraph' ||
+                  type == 'heading' ||
+                  type == 'codeBlock' ||
+                  type == 'listItem' ||
+                  type == 'taskItem';
+              for (final child in node['content']) {
+                extractText(child, insideList: type == 'listItem' || type == 'taskItem');
+              }
+              if (isBlock && !(type == 'paragraph' && isList)) {
+                buffer.write('\n');
+              }
+            }
+          } else if (node is List) {
+            for (final item in node) {
+              extractText(item, insideList: insideList);
+            }
+          }
+        }
+
+        extractText(parsed);
+        result = buffer.toString().trim();
+      } catch (_) {
+        result = content;
+      }
     }
+
+    // Strip any raw leftover HTML formatting tags so editor & snippets stay clean
+    result = result
+        .replaceAll(RegExp(r'</?(?:color|mark|span|u)(?:\s+[^>]*)?>', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
+
+    return result;
   }
 
   String get plainTextSnippet {
@@ -98,14 +146,36 @@ class NoteModel {
 
     if (text.trim().startsWith('{')) {
       try {
-        final parsed = jsonDecode(text);
+        dynamic parsed = jsonDecode(text);
+        // Unwrap any nested or double-encoded doc
+        while (parsed is Map &&
+            parsed['type'] == 'doc' &&
+            parsed['content'] is List &&
+            (parsed['content'] as List).length == 1 &&
+            (parsed['content'] as List)[0] is Map &&
+            (parsed['content'] as List)[0]['type'] == 'paragraph' &&
+            (parsed['content'] as List)[0]['content'] is List &&
+            ((parsed['content'] as List)[0]['content'] as List).length == 1 &&
+            ((parsed['content'] as List)[0]['content'] as List)[0] is Map &&
+            ((parsed['content'] as List)[0]['content'] as List)[0]['text'] is String &&
+            (((parsed['content'] as List)[0]['content'] as List)[0]['text'] as String).trim().startsWith('{"type":"doc"')) {
+          try {
+            parsed = jsonDecode((((parsed['content'] as List)[0]['content'] as List)[0]['text'] as String).trim());
+          } catch (_) {
+            break;
+          }
+        }
         if (parsed is Map && parsed['type'] == 'doc') {
-          return text;
+          return jsonEncode(parsed);
         }
       } catch (_) {}
     }
 
-    final lines = text.split('\n');
+    // Sanitize any raw HTML marks out of text before parsing lines
+    final sanitizedText = text
+        .replaceAll(RegExp(r'</?(?:color|mark|span|u)(?:\s+[^>]*)?>', caseSensitive: false), '');
+
+    final lines = sanitizedText.split('\n');
     final contentNodes = <Map<String, dynamic>>[];
     bool inCodeBlock = false;
     String codeBlockLang = '';
@@ -192,6 +262,24 @@ class NoteModel {
             }
           ]
         });
+      } else if (trimmed.startsWith('- [ ] ') || trimmed.startsWith('- [x] ') || trimmed.startsWith('- [X] ')) {
+        final checked = trimmed.startsWith('- [x] ') || trimmed.startsWith('- [X] ');
+        final itemText = trimmed.substring(6);
+        contentNodes.add({
+          'type': 'taskList',
+          'content': [
+            {
+              'type': 'taskItem',
+              'attrs': {'checked': checked},
+              'content': [
+                {
+                  'type': 'paragraph',
+                  'content': _parseInlineMarks(itemText)
+                }
+              ]
+            }
+          ]
+        });
       } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
         contentNodes.add({
           'type': 'bulletList',
@@ -253,31 +341,149 @@ class NoteModel {
   static List<Map<String, dynamic>> _parseInlineMarks(String text) {
     if (text.isEmpty) return [];
 
+    // Regular expressions for inline tokens
+    final tokenRegex = RegExp(
+      r'(`[^`]+`)|' // 1: code
+      r'(\[([^\]]+)\]\(([^)]+)\))|' // 2: link [text](url), 3: text, 4: url
+      r'(<span\s+style="color:\s*([^"]+)">([\s\S]*?)<\/span>)|' // 5: colored span, 6: color, 7: text
+      r'(<color=([^>]+)>([\s\S]*?)<\/color>)|' // 8: color tag, 9: color, 10: text
+      r'(<mark(?:\s+style="background-color:\s*([^"]+)")?>([\s\S]*?)<\/mark>)|' // 11: mark tag, 12: color, 13: text
+      r'(==([^=]+)==)|' // 14: highlight ==text==, 15: text
+      r'(\*\*([^*]+)\*\*)|' // 16: bold **text**, 17: text
+      r'(\*([^*]+)\*)|' // 18: italic *text*, 19: text
+      r'(~~([^~]+)~~)|' // 20: strike ~~text~~, 21: text
+      r'(<u>([\s\S]*?)<\/u>)', // 22: underline <u>text</u>, 23: text
+    );
+
     final result = <Map<String, dynamic>>[];
-    final codeRegex = RegExp(r'`([^`]+)`');
     int lastEnd = 0;
 
-    for (final match in codeRegex.allMatches(text)) {
+    for (final match in tokenRegex.allMatches(text)) {
       if (match.start > lastEnd) {
         result.add({
           'type': 'text',
-          'text': text.substring(lastEnd, match.start)
+          'text': text.substring(lastEnd, match.start),
         });
       }
-      result.add({
-        'type': 'text',
-        'text': match.group(1),
-        'marks': [
-          {'type': 'code'}
-        ]
-      });
+
+      if (match.group(1) != null) {
+        // Code
+        final codeText = match.group(1)!.substring(1, match.group(1)!.length - 1);
+        result.add({
+          'type': 'text',
+          'text': codeText,
+          'marks': [{'type': 'code'}],
+        });
+      } else if (match.group(2) != null) {
+        // Link
+        final linkText = match.group(3) ?? '';
+        final url = match.group(4) ?? '';
+        result.add({
+          'type': 'text',
+          'text': linkText,
+          'marks': [
+            {
+              'type': 'link',
+              'attrs': {'href': url, 'target': '_blank'},
+            }
+          ],
+        });
+      } else if (match.group(5) != null) {
+        // Colored span
+        final color = match.group(6)?.trim() ?? '#000000';
+        final inner = match.group(7) ?? '';
+        result.add({
+          'type': 'text',
+          'text': inner,
+          'marks': [
+            {
+              'type': 'textStyle',
+              'attrs': {'color': color},
+            }
+          ],
+        });
+      } else if (match.group(8) != null) {
+        // <color=...> tag
+        final color = match.group(9)?.trim() ?? '#000000';
+        final inner = match.group(10) ?? '';
+        result.add({
+          'type': 'text',
+          'text': inner,
+          'marks': [
+            {
+              'type': 'textStyle',
+              'attrs': {'color': color},
+            }
+          ],
+        });
+      } else if (match.group(11) != null) {
+        // <mark> tag
+        final color = match.group(12)?.trim() ?? '#fef08a';
+        final inner = match.group(13) ?? '';
+        result.add({
+          'type': 'text',
+          'text': inner,
+          'marks': [
+            {
+              'type': 'highlight',
+              'attrs': {'color': color},
+            }
+          ],
+        });
+      } else if (match.group(14) != null) {
+        // ==highlight==
+        final inner = match.group(15) ?? '';
+        result.add({
+          'type': 'text',
+          'text': inner,
+          'marks': [
+            {
+              'type': 'highlight',
+              'attrs': {'color': '#fef08a'},
+            }
+          ],
+        });
+      } else if (match.group(16) != null) {
+        // **bold**
+        final inner = match.group(17) ?? '';
+        result.add({
+          'type': 'text',
+          'text': inner,
+          'marks': [{'type': 'bold'}],
+        });
+      } else if (match.group(18) != null) {
+        // *italic*
+        final inner = match.group(19) ?? '';
+        result.add({
+          'type': 'text',
+          'text': inner,
+          'marks': [{'type': 'italic'}],
+        });
+      } else if (match.group(20) != null) {
+        // ~~strike~~
+        final inner = match.group(21) ?? '';
+        result.add({
+          'type': 'text',
+          'text': inner,
+          'marks': [{'type': 'strike'}],
+        });
+      } else if (match.group(22) != null) {
+        // <u>underline</u>
+        final inner = match.group(23) ?? '';
+        result.add({
+          'type': 'text',
+          'text': inner,
+          'marks': [{'type': 'underline'}],
+        });
+      }
+
       lastEnd = match.end;
     }
 
     if (lastEnd < text.length) {
       result.add({
         'type': 'text',
-        'text': text.substring(lastEnd)
+        'text': text.substring(lastEnd),
       });
     }
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRouter } from "vue-router";
-import { Star, FileText, List, Code2, BookOpen, Check, Folder as FolderIcon } from "lucide-vue-next";
+import { Star, FileText, List, Code2, BookOpen, Check, Folder as FolderIcon, Tag } from "lucide-vue-next";
 import type { Note } from "../store/types/interface";
 
 const props = withDefaults(
@@ -78,6 +78,13 @@ const contentType = computed((): { label: string; icon: typeof FileText } => {
     return { label: "Note", icon: FileText };
 });
 
+// ── Tags ──────────────────────────────────────────────────────────────────
+interface TagObj { _id: string; name: string; color?: string }
+const tags = computed((): TagObj[] => {
+    if (!props.note.tags?.length) return [];
+    return (props.note.tags as any[]).filter((t): t is TagObj => typeof t === "object" && t !== null);
+});
+
 // ── Dates ──────────────────────────────────────────────────────────────────
 function relativeTime(d: string): string {
     if (!d) return "";
@@ -121,6 +128,18 @@ const readingTime = computed((): string => {
     const mins = Math.ceil(total / 200);
     return mins < 1 ? "< 1 min" : `${mins} min`;
 });
+
+// Word count
+const wordCount = computed((): number =>
+    preview.value.split(/\s+/).filter(Boolean).length
+);
+
+// ── Context menu (right-click) ─────────────────────────────────────────────
+function handleContextMenu(e: MouseEvent) {
+    e.preventDefault();
+    // Enter selection mode on right-click for quick multi-select
+    emit("enterSelectionMode", props.note._id);
+}
 </script>
 
 <template>
@@ -133,6 +152,7 @@ const readingTime = computed((): string => {
                 : router.push(`/app/notes/${note._id}`)
         "
         @dblclick.stop="emit('enterSelectionMode', note._id)"
+        @contextmenu.prevent="handleContextMenu"
         class="group relative flex items-center justify-between gap-4 px-4 py-3.5 rounded-xl border border-ink-200/80 dark:border-ink-800/80 bg-white/90 dark:bg-ink-900/90 cursor-pointer transition-all duration-150 hover:border-amber-400/50 hover:shadow-md hover:bg-amber-50/20 dark:hover:bg-ink-800/40"
         :class="[
             accentBorder,
@@ -144,7 +164,7 @@ const readingTime = computed((): string => {
         <div
             v-if="isSelectionMode"
             @click.stop="emit('toggleSelection', note._id)"
-            class="w-5 h-5 rounded border border-ink-300 dark:border-ink-600 bg-white dark:bg-ink-800 flex items-center justify-center shrink-0 cursor-pointer"
+            class="w-5 h-5 rounded border border-ink-300 dark:border-ink-600 bg-white dark:bg-ink-800 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
             :class="{ 'bg-amber-500 border-amber-500': isSelected }"
         >
             <Check v-if="isSelected" :size="14" class="text-white" />
@@ -165,13 +185,32 @@ const readingTime = computed((): string => {
                 <p class="text-xs text-ink-500 dark:text-ink-400 font-ui truncate max-w-md mt-0.5">
                     {{ preview || "No content yet…" }}
                 </p>
+                <!-- Tags row (list mode) -->
+                <div v-if="tags.length" class="flex items-center gap-1 mt-1.5 flex-wrap">
+                    <span
+                        v-for="tag in tags.slice(0, 3)"
+                        :key="tag._id"
+                        class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-ui font-medium"
+                        :style="tag.color ? { color: tag.color, backgroundColor: tag.color + '22' } : {}"
+                        :class="!tag.color ? 'bg-ink-100 dark:bg-ink-800 text-ink-500 dark:text-ink-400' : ''"
+                    >
+                        <Tag :size="9" />
+                        {{ tag.name }}
+                    </span>
+                    <span v-if="tags.length > 3" class="text-[10px] text-ink-400 dark:text-ink-600">+{{ tags.length - 3 }}</span>
+                </div>
             </div>
         </div>
 
-        <div class="flex items-center gap-4 shrink-0 text-xs text-ink-400 dark:text-ink-500">
+        <div class="flex items-center gap-3 shrink-0 text-xs text-ink-400 dark:text-ink-500">
+            <!-- Folder badge -->
             <span v-if="note.folderId && typeof note.folderId === 'object'" class="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded bg-ink-100 dark:bg-ink-800 text-ink-600 dark:text-ink-300 text-[11px]">
                 <FolderIcon :size="11" />
                 {{ note.folderId.name }}
+            </span>
+            <!-- Word count (shows on hover) -->
+            <span class="hidden sm:block tabular-nums font-ui text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">
+                {{ wordCount }}w
             </span>
             <span class="tabular-nums font-ui text-[11px]">{{ relativeTime(note.updatedAt) }}</span>
         </div>
@@ -186,23 +225,30 @@ const readingTime = computed((): string => {
                 : router.push(`/app/notes/${note._id}`)
         "
         @dblclick.stop="emit('enterSelectionMode', note._id)"
-        class="group relative flex flex-col rounded-xl border border-ink-200/80 dark:border-ink-800/80 bg-white dark:bg-ink-900 cursor-pointer overflow-hidden transition-all duration-200 hover:border-ink-300 dark:hover:border-ink-600 hover:shadow-xl hover:shadow-ink-900/0.06 dark:hover:shadow-black/40 hover:-translate-y-1"
+        @contextmenu.prevent="handleContextMenu"
+        class="group relative flex flex-col rounded-xl border border-ink-200/80 dark:border-ink-800/80 bg-white dark:bg-ink-900 cursor-pointer overflow-hidden transition-all duration-200 hover:border-ink-300 dark:hover:border-ink-600 hover:shadow-card-hover dark:hover:shadow-black/40 hover:-translate-y-0.5 hover:scale-[1.01]"
         :class="[
             accentBorder,
             'border-l-[3px]',
             isSelected ? 'ring-2 ring-amber-500 border-amber-500' : '',
         ]"
-        style="min-height: 200px"
+        style="min-height: 200px; will-change: transform"
     >
         <!-- Select Checkbox -->
-        <div
-            v-if="isSelectionMode"
-            @click.stop="emit('toggleSelection', note._id)"
-            class="absolute top-3 right-3 z-10 w-6 h-6 rounded border border-ink-300 dark:border-ink-600 bg-white dark:bg-ink-800 flex items-center justify-center shrink-0 cursor-pointer hover:border-ink-500 dark:hover:border-ink-400 transition-colors"
-            :class="{ 'bg-amber-500 border-amber-500': isSelected }"
+        <Transition
+            enter-active-class="transition-all duration-150"
+            enter-from-class="opacity-0 scale-75"
+            enter-to-class="opacity-100 scale-100"
         >
-            <Check v-if="isSelected" :size="16" class="text-white" />
-        </div>
+            <div
+                v-if="isSelectionMode"
+                @click.stop="emit('toggleSelection', note._id)"
+                class="absolute top-3 right-3 z-10 w-6 h-6 rounded border border-ink-300 dark:border-ink-600 bg-white dark:bg-ink-800 flex items-center justify-center shrink-0 cursor-pointer hover:border-ink-500 dark:hover:border-ink-400 transition-colors shadow-sm"
+                :class="{ 'bg-amber-500 border-amber-500': isSelected }"
+            >
+                <Check v-if="isSelected" :size="16" class="text-white" />
+            </div>
+        </Transition>
 
         <!-- Main content -->
         <div class="flex flex-col flex-1 px-5 pt-5 pb-4">
@@ -226,13 +272,35 @@ const readingTime = computed((): string => {
             <p class="text-[13px] text-ink-500 dark:text-ink-400 font-ui leading-relaxed line-clamp-3 flex-1">
                 {{ preview || "No content yet…" }}
             </p>
+
+            <!-- Tags (grid mode) -->
+            <div v-if="tags.length" class="flex items-center gap-1 mt-3 flex-wrap">
+                <span
+                    v-for="tag in tags.slice(0, 2)"
+                    :key="tag._id"
+                    class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-ui font-medium"
+                    :style="tag.color ? { color: tag.color, backgroundColor: tag.color + '22' } : {}"
+                    :class="!tag.color ? 'bg-ink-100 dark:bg-ink-800 text-ink-500 dark:text-ink-400' : ''"
+                >
+                    <Tag :size="9" />
+                    {{ tag.name }}
+                </span>
+                <span v-if="tags.length > 2" class="text-[10px] text-ink-400 dark:text-ink-600">+{{ tags.length - 2 }}</span>
+            </div>
         </div>
 
         <!-- Footer -->
         <div class="px-5 py-3 border-t border-ink-100 dark:border-ink-800/80 flex items-center justify-between gap-2 bg-ink-50/50 dark:bg-ink-900/60">
-            <span class="text-[11px] text-ink-400 dark:text-ink-500 font-ui tabular-nums">
-                {{ relativeTime(note.updatedAt) }}
-            </span>
+            <div class="flex items-center gap-2">
+                <span class="text-[11px] text-ink-400 dark:text-ink-500 font-ui tabular-nums">
+                    {{ relativeTime(note.updatedAt) }}
+                </span>
+                <!-- Folder badge in footer -->
+                <span v-if="note.folderId && typeof note.folderId === 'object'" class="hidden sm:flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-ink-100 dark:bg-ink-800 text-[10px] text-ink-500 dark:text-ink-400 font-ui">
+                    <FolderIcon :size="9" />
+                    {{ note.folderId.name }}
+                </span>
+            </div>
             <span class="text-[11px] text-ink-400 dark:text-ink-500 font-ui opacity-0 group-hover:opacity-100 transition-opacity tabular-nums">
                 {{ readingTime }} read
             </span>

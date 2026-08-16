@@ -35,6 +35,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final ApiClient _api = ApiClient();
 
   AuthNotifier() : super(AuthState()) {
+    ApiClient.onUnauthorized = () {
+      state = AuthState(isLoading: false, isAuthenticated: false);
+    };
     checkAuthStatus();
   }
 

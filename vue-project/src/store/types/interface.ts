@@ -18,6 +18,7 @@ export interface Note {
   content: string; // Tiptap JSON stringified
   slug?: string | null;
   tagIds: string[];
+  tags?: Array<{ _id: string; name: string; color?: string } | string>;
   isFavorite: boolean;
   isDeleted: boolean;
   deletedAt?: string | null;

@@ -8,6 +8,17 @@ import { generateHTML } from '@tiptap/html'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
+import Underline from '@tiptap/extension-underline'
+import Highlight from '@tiptap/extension-highlight'
+import TextAlign from '@tiptap/extension-text-align'
+import Subscript from '@tiptap/extension-subscript'
+import Superscript from '@tiptap/extension-superscript'
+import TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
+import { Table } from '@tiptap/extension-table'
+import { TableRow } from '@tiptap/extension-table-row'
+import { TableCell } from '@tiptap/extension-table-cell'
+import { TableHeader } from '@tiptap/extension-table-header'
 
 const route   = useRoute()
 const noteId  = route.params.noteId as string
@@ -30,7 +41,23 @@ onMounted(async () => {
 function renderContent(content: string): string {
   if (!content) return '<p class="text-ink-300 italic">This note has no content yet.</p>'
   try {
-    return generateHTML(JSON.parse(content), [StarterKit, Image, Link])
+    const json = typeof content === 'string' ? JSON.parse(content) : content
+    return generateHTML(json, [
+      StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false, underline: false }),
+      Image.configure({ inline: false, allowBase64: true }),
+      Link.configure({ openOnClick: true }),
+      Underline,
+      Highlight.configure({ multicolor: true }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      Subscript,
+      Superscript,
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableCell,
+      TableHeader,
+    ])
   } catch {
     return content
   }

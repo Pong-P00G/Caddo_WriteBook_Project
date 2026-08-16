@@ -38,6 +38,38 @@ export default {
         mono: ['"JetBrains Mono"', "monospace"],
         ui: ['"Inter"', "system-ui", "sans-serif"],
       },
+      boxShadow: {
+        card: "0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06)",
+        popover: "0 4px 6px -1px rgb(0 0 0 / 0.10), 0 2px 4px -2px rgb(0 0 0 / 0.10)",
+        modal: "0 10px 15px -3px rgb(0 0 0 / 0.10), 0 4px 6px -4px rgb(0 0 0 / 0.10)",
+        "card-hover": "0 4px 12px 0 rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06)",
+        "inner-sm": "inset 0 1px 2px 0 rgb(0 0 0 / 0.05)",
+      },
+      borderRadius: {
+        "card": "12px",
+        "dialog": "16px",
+        "chip": "8px",
+        "pill": "9999px",
+      },
+      transitionDuration: {
+        fast: "120ms",
+        base: "200ms",
+        slow: "350ms",
+      },
+      transitionTimingFunction: {
+        bounce: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        smooth: "cubic-bezier(0.4, 0, 0.2, 1)",
+      },
+      spacing: {
+        "4.5": "1.125rem",
+        "13": "3.25rem",
+        "15": "3.75rem",
+        "18": "4.5rem",
+      },
+      scale: {
+        "101": "1.01",
+        "102": "1.02",
+      },
       typography: (theme) => ({
         ink: {
           css: {

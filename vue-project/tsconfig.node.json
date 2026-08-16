@@ -4,7 +4,6 @@
     "vite.config.*",
     "vitest.config.*",
     "cypress.config.*",
-    "playwright.config.*",
     "eslint.config.*"
   ],
   "compilerOptions": {
@@ -14,6 +13,9 @@
     "moduleResolution": "bundler",
     "types": [
       "node"
+    ],
+    "lib": [
+      "ES2023"
     ],
     "noEmit": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo"

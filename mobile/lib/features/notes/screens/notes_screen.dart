@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:intl/intl.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/models/models.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../settings/screens/profile_screen.dart';
 import '../../settings/screens/settings_screen.dart';
@@ -16,6 +18,21 @@ import '../providers/tags_provider.dart';
 import '../providers/trash_provider.dart';
 import 'note_editor_screen.dart';
 import 'trash_screen.dart';
+
+/// Shimmer skeleton for a single note card
+Widget _buildNoteCardSkeleton(bool isDark, bool isGrid) {
+  return Shimmer.fromColors(
+    baseColor: isDark ? AppColors.ink800 : AppColors.ink200,
+    highlightColor: isDark ? AppColors.ink700 : AppColors.ink100,
+    child: Container(
+      height: isGrid ? 180 : 80,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+    ),
+  );
+}
 
 class NotesScreen extends ConsumerWidget {
   const NotesScreen({super.key});
@@ -600,6 +617,17 @@ class NotesScreen extends ConsumerWidget {
                       );
                     },
                   ),
+                  ListTile(
+                    leading: Icon(
+                      isDark ? LucideIcons.sun : LucideIcons.moon,
+                      size: 20,
+                      color: AppColors.amber500,
+                    ),
+                    title: Text(isDark ? 'Light mode' : 'Dark mode'),
+                    onTap: () {
+                      ref.read(themeProvider.notifier).toggleTheme(isDark);
+                    },
+                  ),
                 ],
               ),
             ),
@@ -617,24 +645,9 @@ class NotesScreen extends ConsumerWidget {
             children: [
               TextField(
                 onChanged: (val) => notifier.setSearchQuery(val),
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'Search notes…',
-                  prefixIcon: const Icon(LucideIcons.search, size: 18),
-                  filled: true,
-                  fillColor: isDark ? AppColors.ink900 : Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: isDark ? AppColors.ink800 : AppColors.ink200,
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: isDark ? AppColors.ink800 : AppColors.ink200,
-                    ),
-                  ),
+                  prefixIcon: Icon(LucideIcons.search, size: 18),
                 ),
               ),
               const SizedBox(height: 12),
@@ -667,36 +680,73 @@ class NotesScreen extends ConsumerWidget {
 
         // Content body
         Expanded(
-          child: state.isLoading
-              ? const Center(child: CircularProgressIndicator(color: AppColors.amber500))
+          child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: state.isLoading
+              ? state.isGridView
+                ? GridView.builder(
+                    key: const ValueKey('skeleton-grid'),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.85,
+                    ),
+                    itemCount: 8,
+                    itemBuilder: (_, _) => _buildNoteCardSkeleton(isDark, true),
+                  )
+                : ListView.separated(
+                    key: const ValueKey('skeleton-list'),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: 6,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (_, _) => _buildNoteCardSkeleton(isDark, false),
+                  )
               : state.error != null
                   ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(LucideIcons.alertCircle, size: 48, color: Colors.redAccent),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Failed to fetch notes',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : AppColors.ink900,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              state.error!.contains('401') ? LucideIcons.lock : LucideIcons.alertCircle,
+                              size: 48,
+                              color: state.error!.contains('401') ? AppColors.amber500 : Colors.redAccent,
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            state.error!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 13, color: AppColors.ink400),
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: () => notifier.fetchNotes(),
-                            icon: const Icon(LucideIcons.refreshCw, size: 16),
-                            label: const Text('Retry'),
-                          ),
-                        ],
+                            const SizedBox(height: 12),
+                            Text(
+                              state.error!.contains('401') ? 'Session Expired' : 'Failed to fetch notes',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : AppColors.ink900,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              state.error!.contains('401')
+                                  ? 'Your session has expired. Please log in again.'
+                                  : 'Could not load notes. Please check your network connection.',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 13, color: AppColors.ink400),
+                            ),
+                            const SizedBox(height: 18),
+                            if (state.error!.contains('401'))
+                              ElevatedButton.icon(
+                                onPressed: () => ref.read(authProvider.notifier).logout(),
+                                icon: const Icon(LucideIcons.logIn, size: 16),
+                                label: const Text('Log In Again'),
+                              )
+                            else
+                              ElevatedButton.icon(
+                                onPressed: () => notifier.fetchNotes(),
+                                icon: const Icon(LucideIcons.refreshCw, size: 16),
+                                label: const Text('Retry'),
+                              ),
+                          ],
+                        ),
                       ),
                     )
                   : filteredNotes.isEmpty
@@ -704,28 +754,47 @@ class NotesScreen extends ConsumerWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                LucideIcons.stickyNote,
-                                size: 48,
-                                color: isDark ? AppColors.ink700 : AppColors.ink300,
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppColors.ink900 : AppColors.ink100,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  LucideIcons.stickyNote,
+                                  size: 40,
+                                  color: isDark ? AppColors.ink600 : AppColors.ink400,
+                                ),
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 16),
                               Text(
-                                'No notes found',
+                                'No notes yet',
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark ? AppColors.ink300 : AppColors.ink600,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? AppColors.ink300 : AppColors.ink700,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Tap + to create your first note',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: isDark ? AppColors.ink500 : AppColors.ink500,
                                 ),
                               ),
                             ],
                           ),
                         )
                       : RefreshIndicator(
+                          color: AppColors.amber500,
                           onRefresh: () => notifier.fetchNotes(),
                           child: state.isGridView
                               ? GridView.builder(
+                                  key: const ValueKey('notes-grid'),
                                   padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  // ignore: deprecated_member_use
+                                  cacheExtent: 600,
                                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: crossAxisCount,
                                     crossAxisSpacing: 12,
@@ -735,53 +804,70 @@ class NotesScreen extends ConsumerWidget {
                                   itemCount: filteredNotes.length,
                                   itemBuilder: (context, index) {
                                     final note = filteredNotes[index];
-                                    return _NoteGridCard(
-                                      note: note,
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => NoteEditorScreen(note: note),
-                                          ),
-                                        );
-                                      },
+                                    return RepaintBoundary(
+                                      child: _NoteGridCard(
+                                        note: note,
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => NoteEditorScreen(note: note),
+                                            ),
+                                          );
+                                        },
+                                      ),
                                     );
                                   },
                                 )
                               : ListView.separated(
+                                  key: const ValueKey('notes-list'),
                                   padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  // ignore: deprecated_member_use
+                                  cacheExtent: 400,
                                   itemCount: filteredNotes.length,
                                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                                   itemBuilder: (context, index) {
                                     final note = filteredNotes[index];
-                                    return _NoteListCard(
-                                      note: note,
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => NoteEditorScreen(note: note),
-                                          ),
-                                        );
-                                      },
+                                    return RepaintBoundary(
+                                      child: _NoteListCard(
+                                        note: note,
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => NoteEditorScreen(note: note),
+                                            ),
+                                          );
+                                        },
+                                      ),
                                     );
                                   },
                                 ),
                         ),
-        ),
+            ), // closes AnimatedSwitcher child
+          ), // closes Expanded child
       ],
     );
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('WriteBook Notes'),
+        title: const Text('WriteBook'),
         automaticallyImplyLeading: !isWideScreen,
         actions: [
+          IconButton(
+            icon: Icon(
+              isDark ? LucideIcons.sun : LucideIcons.moon,
+              size: 20,
+            ),
+            tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+            onPressed: () => ref.read(themeProvider.notifier).toggleTheme(isDark),
+          ),
           IconButton(
             icon: Icon(
               state.isGridView ? LucideIcons.list : LucideIcons.layoutGrid,
               size: 20,
             ),
+            tooltip: state.isGridView ? 'Switch to list view' : 'Switch to grid view',
             onPressed: () => notifier.toggleViewMode(),
           ),
         ],
@@ -796,17 +882,19 @@ class NotesScreen extends ConsumerWidget {
           ? Row(
               children: [
                 // Permanent Responsive Left Navigation Sidebar
-                Container(
-                  width: 270,
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.ink950 : Colors.white,
-                    border: Border(
-                      right: BorderSide(
-                        color: isDark ? AppColors.ink800 : AppColors.ink200,
+                Material(
+                  color: isDark ? AppColors.ink950 : Colors.white,
+                  child: Container(
+                    width: 270,
+                    decoration: BoxDecoration(
+                      border: Border(
+                        right: BorderSide(
+                          color: isDark ? AppColors.ink800 : AppColors.ink200,
+                        ),
                       ),
                     ),
+                    child: buildDrawerContent(isPermanent: true),
                   ),
-                  child: buildDrawerContent(isPermanent: true),
                 ),
                 // Main Notes Content Panel
                 Expanded(
@@ -816,10 +904,20 @@ class NotesScreen extends ConsumerWidget {
             )
           : mainNotesBody,
       floatingActionButton: FloatingActionButton.extended(
+        elevation: 4,
+        highlightElevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: AppColors.amber500,
         foregroundColor: Colors.white,
-        icon: const Icon(LucideIcons.plus, size: 20),
-        label: const Text('New Note'),
+        icon: const Icon(LucideIcons.plus, size: 18),
+        label: const Text(
+          'New Note',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            letterSpacing: 0.2,
+          ),
+        ),
         onPressed: () async {
           final newNote = await notifier.createNote(title: 'Untitled Note');
           if (newNote != null && context.mounted) {
