@@ -11,7 +11,7 @@ export interface User {
 // ─── Note ──────────────────────────────────────────────
 export interface Note {
   _id: string;
-  userId: string;
+  userId: string | { _id: string; name: string; avatar?: string; bio?: string };
   workspaceId?: string | { _id: string; name: string; icon?: string } | null;
   folderId?: string | { _id: string; name: string } | null;
   title: string;
@@ -20,11 +20,29 @@ export interface Note {
   tagIds: string[];
   tags?: Array<{ _id: string; name: string; color?: string } | string>;
   isFavorite: boolean;
+  isPinned?: boolean;
+  color?: string | null;
+  isPublic?: boolean;
+  hasPassword?: boolean;
+  isProtected?: boolean;
+  viewCount?: number;
+  author?: { _id: string; name: string; avatar?: string; bio?: string };
   isDeleted: boolean;
   deletedAt?: string | null;
   version: number;
   createdAt: string;
   updatedAt: string;
+}
+
+// ─── Note Revision ────────────────────────────────────
+export interface NoteRevision {
+  _id: string;
+  noteId: string;
+  userId?: string;
+  title: string;
+  content?: string;
+  changeSummary: string;
+  createdAt: string;
 }
 
 // ─── Tag ──────────────────────────────────────────────

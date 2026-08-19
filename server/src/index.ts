@@ -12,6 +12,7 @@ import tagRoutes from "./routes/tags.js";
 import workspaceRoutes from "./routes/workspaces.js";
 import folderRoutes from "./routes/folders.js";
 import settingRoutes from "./routes/settings.js";
+import attachmentRoutes from "./routes/attachments.js";
 
 await connectDB();
 
@@ -28,7 +29,7 @@ root.use(
   }),
 );
 
-// Serve uploaded files (avatars, etc.) from ./uploads/
+// Serve uploaded files (avatars, attachments, etc.) from ./uploads/
 root.use("/uploads/*", serveStatic({ root: "./" }));
 
 // ── API sub-app ──────────────────────────────────────
@@ -44,6 +45,7 @@ app.route("/tags", tagRoutes);
 app.route("/workspaces", workspaceRoutes);
 app.route("/folders", folderRoutes);
 app.route("/settings", settingRoutes);
+app.route("/attachments", attachmentRoutes);
 
 app.get("/health", (c) => c.json({ status: "ok", ts: Date.now() }));
 app.notFound((c) =>

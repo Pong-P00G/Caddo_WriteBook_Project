@@ -8,6 +8,11 @@ export interface INote extends Document {
   content: string; // Raw Markdown
   tagIds: mongoose.Types.ObjectId[]; // Array of Tag ObjectIds
   isFavorite: boolean;
+  isPinned: boolean;
+  color?: string | null;
+  isPublic: boolean;
+  sharePassword?: string | null;
+  viewCount: number;
   isDeleted: boolean;
   deletedAt: Date | null;
   version: number;
@@ -41,10 +46,15 @@ const NoteSchema = new Schema<INote>(
     content: { type: String, default: "" },
     tagIds: [{ type: Schema.Types.ObjectId, ref: "Tag" }],
     isFavorite: { type: Boolean, default: false, index: true },
+    isPinned: { type: Boolean, default: false, index: true },
+    color: { type: String, default: null },
+    isPublic: { type: Boolean, default: false, index: true },
+    sharePassword: { type: String, default: null },
+    viewCount: { type: Number, default: 0 },
     isDeleted: { type: Boolean, default: false, index: true },
     deletedAt: { type: Date, default: null },
     version: { type: Number, default: 0 },
-    slug: { type: String, default: null, index: true, sparse: true },
+    slug: { type: String, default: null, index: true, sparse: true, unique: true },
   },
   { timestamps: true },
 );
@@ -54,8 +64,10 @@ NoteSchema.index({
   workspaceId: 1,
   folderId: 1,
   isDeleted: 1,
+  isPinned: -1,
   updatedAt: -1,
 });
+NoteSchema.index({ userId: 1, isPinned: -1, updatedAt: -1 });
 NoteSchema.index({ userId: 1, isFavorite: 1, isDeleted: 1, updatedAt: -1 });
 NoteSchema.index({ userId: 1, isDeleted: 1, deletedAt: -1 });
 NoteSchema.index({ userId: 1, tagIds: 1 });

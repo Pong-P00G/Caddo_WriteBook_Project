@@ -1,16 +1,23 @@
 <script setup lang="ts">
 import { onMounted, computed, ref, defineAsyncComponent } from "vue";
 import { RouterLink, useRouter } from "vue-router";
-import { PenLine, Trash2, Check } from "lucide-vue-next";
+import { PenLine, Trash2, Check, Sparkles, Pin } from "lucide-vue-next";
 import { useNotesStore } from "../store/notes";
 
 const store = useNotesStore();
 const router = useRouter();
 const NoteCard = defineAsyncComponent(() => import("@/components/NoteCard.vue") as Promise<any>);
+const TemplateGalleryModal = defineAsyncComponent(() => import("@/components/TemplateGalleryModal.vue"));
+
 onMounted(() => store.fetchNotes());
+
 const shown = computed(() => store.notes.filter((n) => !n.isDeleted));
+const pinnedNotes = computed(() => shown.value.filter((n) => n.isPinned));
+const unpinnedNotes = computed(() => shown.value.filter((n) => !n.isPinned));
+
 const selectedNotes = ref<Set<string>>(new Set());
 const isSelectionMode = ref(false);
+const showTemplateModal = ref(false);
 
 function toggleSelectionMode() {
     isSelectionMode.value = !isSelectionMode.value;
@@ -72,7 +79,7 @@ function enterSelectionMode(id: string) {
                 </template>
             </div>
 
-            <!-- Right: new note or delete/exit -->
+            <!-- Right: templates + new note or delete/exit -->
             <div class="flex items-center gap-2">
                 <template v-if="isSelectionMode">
                     <button
@@ -90,9 +97,16 @@ function enterSelectionMode(id: string) {
                     </button>
                 </template>
                 <template v-else>
+                    <button
+                        @click="showTemplateModal = true"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-100 dark:hover:bg-ink-800 text-xs font-ui text-ink-700 dark:text-ink-300 transition-colors"
+                    >
+                        <Sparkles :size="13" class="text-amber-500" />
+                        <span>Templates</span>
+                    </button>
                     <RouterLink
                         to="/app/notes/new"
-                        class="flex items-center gap-1.5 px-3 py-1.5 bg-ink-900 dark:bg-amber-500 hover:bg-ink-700 dark:hover:bg-amber-600 text-white dark:text-ink-950 rounded-lg font-ui font-semibold text-xs transition-colors"
+                        class="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-ui font-semibold text-xs shadow-sm transition-colors"
                     >
                         <PenLine :size="13" /> New Note
                     </RouterLink>
@@ -139,36 +153,65 @@ function enterSelectionMode(id: string) {
                     >
                 </div>
 
-                <!-- Grid -->
-                <div
-                    v-else
-                    class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-                >
-                    <NoteCard
-                        v-for="note in shown"
-                        :key="note._id"
-                        :note="note"
-                        :is-selected="selectedNotes.has(note._id)"
-                        :is-selection-mode="isSelectionMode"
-                        @toggle-selection="toggleNoteSelection"
-                        @enter-selection-mode="enterSelectionMode"
-                    />
-                    <RouterLink
-                        v-if="!isSelectionMode"
-                        to="/app/notes/new"
-                        class="group flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-ink-200 dark:border-ink-700 hover:border-ink-400 dark:hover:border-ink-500 transition-colors min-h-48"
-                    >
-                        <PenLine
-                            :size="18"
-                            class="text-ink-300 dark:text-ink-700 group-hover:text-ink-500 dark:group-hover:text-ink-400 transition-colors"
-                        />
-                        <span
-                            class="text-xs text-ink-300 dark:text-ink-700 group-hover:text-ink-500 font-ui transition-colors"
-                            >New Note</span
-                        >
-                    </RouterLink>
+                <!-- Notes Grid with Pinned Section -->
+                <div v-else class="space-y-8">
+                    <!-- Pinned section -->
+                    <div v-if="pinnedNotes.length" class="space-y-3">
+                        <div class="flex items-center gap-2 text-xs font-ui font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-widest">
+                            <Pin :size="13" class="fill-amber-500" />
+                            <span>Pinned Notes</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4.5">
+                            <NoteCard
+                                v-for="note in pinnedNotes"
+                                :key="note._id"
+                                :note="note"
+                                :is-selected="selectedNotes.has(note._id)"
+                                :is-selection-mode="isSelectionMode"
+                                @toggle-selection="toggleNoteSelection"
+                                @enter-selection-mode="enterSelectionMode"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- All / Unpinned Section -->
+                    <div>
+                        <div v-if="pinnedNotes.length && unpinnedNotes.length" class="flex items-center gap-2 text-xs font-ui font-medium text-ink-400 dark:text-ink-600 mb-3 uppercase tracking-widest">
+                            <span>Other Notes</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4.5">
+                            <NoteCard
+                                v-for="note in unpinnedNotes"
+                                :key="note._id"
+                                :note="note"
+                                :is-selected="selectedNotes.has(note._id)"
+                                :is-selection-mode="isSelectionMode"
+                                @toggle-selection="toggleNoteSelection"
+                                @enter-selection-mode="enterSelectionMode"
+                            />
+                            <RouterLink
+                                v-if="!isSelectionMode"
+                                to="/app/notes/new"
+                                class="group flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-ink-200 dark:border-ink-700 hover:border-ink-400 dark:hover:border-ink-500 transition-colors min-h-48"
+                            >
+                                <PenLine
+                                    :size="18"
+                                    class="text-ink-300 dark:text-ink-700 group-hover:text-ink-500 dark:group-hover:text-ink-400 transition-colors"
+                                />
+                                <span
+                                    class="text-xs text-ink-300 dark:text-ink-700 group-hover:text-ink-500 font-ui transition-colors"
+                                    >New Note</span
+                                >
+                            </RouterLink>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <TemplateGalleryModal
+            :is-open="showTemplateModal"
+            @close="showTemplateModal = false"
+        />
     </div>
 </template>

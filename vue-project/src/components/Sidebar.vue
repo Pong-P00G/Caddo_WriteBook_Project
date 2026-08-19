@@ -243,11 +243,11 @@ async function handleDeleteFolder(folder: any, e: MouseEvent) {
 
 <template>
     <aside
-        class="w-[280px] bg-[#f7f7f7] dark:bg-[#1a1a1a] flex flex-col shrink-0 overflow-hidden h-full border-r border-[#e0e0e0] dark:border-[#333]"
+        class="w-70 bg-[#f7f7f7] dark:bg-[#1a1a1a] flex flex-col shrink-0 overflow-hidden h-full border-r border-[#e0e0e0] dark:border-[#333]"
     >
         <!-- ── Logo ──────────────────────────────────────────────── -->
         <div class="px-4 py-4 border-b border-[#e0e0e0] dark:border-[#333] shrink-0">
-            <RouterLink to="/app/notes" class="flex items-center gap-2.5">
+            <RouterLink to="/app/home" class="flex items-center gap-2.5">
                 <div
                     class="w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center shrink-0"
                 >
@@ -647,9 +647,9 @@ async function handleDeleteFolder(folder: any, e: MouseEvent) {
         <!-- ── Bottom ─────────────────────────────────────────────── -->
         <div class="shrink-0 border-t border-[#e0e0e0] dark:border-[#333] px-2 py-3 space-y-0.5">
             <RouterLink
-                to="/app/profile"
+                to="/app/profile-settings?tab=profile"
                 class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-white/70 dark:hover:bg-[#252525]/70 transition-colors group"
-                :class="isActive('/app/profile') ? 'bg-white dark:bg-[#252525] shadow-sm' : ''"
+                :class="isActive('/app/profile-settings') ? 'bg-white dark:bg-[#252525] shadow-sm' : ''"
             >
                 <div
                     class="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden"
@@ -667,10 +667,10 @@ async function handleDeleteFolder(folder: any, e: MouseEvent) {
                 </span>
             </RouterLink>
             <RouterLink
-                to="/app/settings"
+                to="/app/profile-settings?tab=account"
                 class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors"
                 :class="
-                    isActive('/app/settings')
+                    isActive('/app/profile-settings')
                         ? 'bg-white dark:bg-[#252525] text-[#1a1a1a] dark:text-[#f5f5f5] shadow-sm'
                         : 'text-[#999] dark:text-[#666] hover:bg-white/70 dark:hover:bg-[#252525]/70 hover:text-[#666] dark:hover:text-[#999]'
                 "

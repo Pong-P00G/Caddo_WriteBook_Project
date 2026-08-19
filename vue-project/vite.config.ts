@@ -28,12 +28,21 @@ export default defineConfig({
   build: {
     // Don't generate sourcemaps in production for smaller output
     sourcemap: false,
-    // Enable CSS code splitting
     cssCodeSplit: true,
+    chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
-        // Split vendor chunks for better caching + smaller initial bundle
         manualChunks(id) {
+          // Export libraries (xlsx, jspdf, html2canvas) — lazy loaded
+          if (
+            id.includes("xlsx") ||
+            id.includes("jspdf") ||
+            id.includes("html2canvas") ||
+            id.includes("canvg") ||
+            id.includes("fflate")
+          ) {
+            return "vendor-export";
+          }
           // Tiptap is large (~400KB) — give it its own chunk
           if (id.includes("@tiptap")) {
             return "vendor-tiptap";
@@ -42,7 +51,7 @@ export default defineConfig({
           if (id.includes("lucide-vue-next")) {
             return "vendor-lucide";
           }
-          // Vue core + router + pinia — small runtime chunk
+          // Vue core + router + pinia
           if (
             id.includes("node_modules/vue/") ||
             id.includes("node_modules/@vue/") ||

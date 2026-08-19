@@ -10,6 +10,8 @@ class NoteModel {
   final String? slug;
   final List<String> tagIds;
   final bool isFavorite;
+  final bool isPinned;
+  final String? color;
   final bool isDeleted;
   final DateTime updatedAt;
   final DateTime createdAt;
@@ -24,6 +26,8 @@ class NoteModel {
     this.slug,
     this.tagIds = const [],
     this.isFavorite = false,
+    this.isPinned = false,
+    this.color,
     this.isDeleted = false,
     required this.updatedAt,
     required this.createdAt,
@@ -508,6 +512,8 @@ class NoteModel {
       slug: json['slug']?.toString(),
       tagIds: (json['tagIds'] as List?)?.map((e) => e.toString()).toList() ?? [],
       isFavorite: json['isFavorite'] ?? false,
+      isPinned: json['isPinned'] ?? false,
+      color: json['color']?.toString(),
       isDeleted: json['isDeleted'] ?? false,
       updatedAt: DateTime.tryParse(json['updatedAt']?.toString() ?? '') ?? DateTime.now(),
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
@@ -525,6 +531,8 @@ class NoteModel {
       'slug': slug,
       'tagIds': tagIds,
       'isFavorite': isFavorite,
+      'isPinned': isPinned,
+      'color': color,
       'isDeleted': isDeleted,
       'updatedAt': updatedAt.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
@@ -535,6 +543,8 @@ class NoteModel {
     String? title,
     String? content,
     bool? isFavorite,
+    bool? isPinned,
+    String? color,
     bool? isDeleted,
   }) {
     return NoteModel(
@@ -547,6 +557,8 @@ class NoteModel {
       slug: slug,
       tagIds: tagIds,
       isFavorite: isFavorite ?? this.isFavorite,
+      isPinned: isPinned ?? this.isPinned,
+      color: color ?? this.color,
       isDeleted: isDeleted ?? this.isDeleted,
       updatedAt: DateTime.now(),
       createdAt: createdAt,

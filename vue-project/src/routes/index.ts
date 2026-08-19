@@ -28,6 +28,11 @@ const router = createRouter({
       children: [
         { path: "", redirect: "/app/notes" },
         {
+          path: "home",
+          name: "home",
+          component: () => import("../views/HomeViews.vue"),
+        },
+        {
           path: "notes",
           name: "notes",
           component: () => import("../views/Notes.vue"),
@@ -55,12 +60,17 @@ const router = createRouter({
         {
           path: "settings",
           name: "settings",
-          component: () => import("../views/Settings.vue"),
+          redirect: { name: "profile-settings", query: { tab: "account" } },
         },
         {
           path: "profile",
           name: "profile",
-          component: () => import("../views/Profile.vue"),
+          redirect: { name: "profile-settings", query: { tab: "profile" } },
+        },
+        {
+          path: "profile-settings",
+          name: "profile-settings",
+          component: () => import("../views/ProfileSettings.vue"),
         },
         {
           path: "trash",
@@ -84,6 +94,11 @@ const router = createRouter({
     {
       path: "/read/:noteId",
       component: () => import("../views/ReadViews.vue"),
+    },
+    {
+      path: "/share/:slug",
+      name: "public-share",
+      component: () => import("../views/PublicNoteView.vue"),
     },
 
     // 404

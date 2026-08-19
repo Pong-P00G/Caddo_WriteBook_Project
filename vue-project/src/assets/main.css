@@ -4,38 +4,39 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    /* ── Neutral gray palette ── */
-    --color-ink-50: #f8f8f8;
-    --color-ink-100: #f0f0f0;
-    --color-ink-200: #e2e2e2;
-    --color-ink-300: #c8c8c8;
-    --color-ink-400: #a0a0a0;
-    --color-ink-500: #7a7a7a;
-    --color-ink-600: #5a5a5a;
-    --color-ink-700: #3a3a3a;
-    --color-ink-800: #262626;
-    --color-ink-900: #171717;
-    --color-ink-950: #0d0d0d;
-    --color-parchment: #fdf9f0;
+    /* ── Sleek obsidian/slate neutral palette ── */
+    --color-ink-50: #f8fafc;
+    --color-ink-100: #f1f5f9;
+    --color-ink-200: #e2e8f0;
+    --color-ink-300: #cbd5e1;
+    --color-ink-400: #94a3b8;
+    --color-ink-500: #64748b;
+    --color-ink-600: #475569;
+    --color-ink-700: #334155;
+    --color-ink-800: #1e293b;
+    --color-ink-900: #0f172a;
+    --color-ink-950: #090d16;
+    --color-parchment: #fdfaf4;
 
-    /* ── Amber accent ── */
-    --color-amber-50: #fdf8ec;
-    --color-amber-100: #faefc9;
-    --color-amber-200: #f4dc8e;
-    --color-amber-300: #edc654;
-    --color-amber-400: #e6b02c;
-    --color-amber-500: #d9941c;
-    --color-amber-600: #bf7015;
-    --color-amber-700: #9b5214;
-    --color-amber-800: #7e4118;
-    --color-amber-900: #6a3618;
-    --color-amber-950: #3d1b09;
+    /* ── Luminous Amber accent ── */
+    --color-amber-50: #fffbeb;
+    --color-amber-100: #fef3c7;
+    --color-amber-200: #fde68a;
+    --color-amber-300: #fcd34d;
+    --color-amber-400: #fbbf24;
+    --color-amber-500: #f59e0b;
+    --color-amber-600: #d97706;
+    --color-amber-700: #b45309;
+    --color-amber-800: #92400e;
+    --color-amber-900: #78350f;
+    --color-amber-950: #451a03;
 
     /* ── Fonts ── */
-    --font-display: "Playfair Display", Georgia, serif;
-    --font-body: "Source Serif 4", Georgia, serif;
+    --font-display: "Outfit", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-body: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-serif: "Newsreader", "Source Serif 4", Georgia, serif;
     --font-mono: "JetBrains Mono", monospace;
-    --font-ui: "Inter", system-ui, sans-serif;
+    --font-ui: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
 
     /* ── Shadows ── */
     --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
@@ -442,36 +443,25 @@
 
         /* Tables — Excel style */
         table {
-            @apply w-full border-collapse my-6 text-sm;
+            @apply w-full border-collapse my-6 text-sm border border-ink-200 dark:border-ink-800 rounded-lg overflow-hidden;
             border-spacing: 0;
-            border: 1px solid #d4d4d4;
         }
         th {
-            @apply bg-ink-50 dark:bg-ink-800 text-ink-900 dark:text-ink-100 font-semibold text-left px-3 py-2.5;
-            border: 1px solid #d4d4d4;
-            border-top: 2px solid #404040;
-            border-bottom: 2px solid #404040;
+            @apply bg-ink-100 dark:bg-ink-800/80 text-ink-900 dark:text-ink-100 font-semibold text-left px-3.5 py-2.5 border-b border-ink-200 dark:border-ink-700;
         }
         td {
-            @apply px-3 py-2.5 text-ink-700 dark:text-ink-300;
-            border: 1px solid #d4d4d4;
-        }
-        th + th, td + td {
-            border-left: 1px solid #d4d4d4;
-        }
-        tr + tr td {
-            border-top: 1px solid #d4d4d4;
+            @apply px-3.5 py-2 text-ink-700 dark:text-ink-300 border-b border-r border-ink-100 dark:border-ink-800/60;
         }
         tr:nth-child(even) td {
-            @apply bg-[#fafafa] dark:bg-ink-900/50;
+            @apply bg-ink-50/50 dark:bg-ink-900/30;
         }
         tr:hover td {
-            @apply bg-amber-50 dark:bg-ink-800/70;
+            @apply bg-amber-500/10 dark:bg-amber-500/10;
         }
 
         p.is-editor-empty:first-child::before {
             content: attr(data-placeholder);
-            @apply text-ink-300 dark:text-ink-700 float-left h-0 pointer-events-none;
+            @apply text-ink-400 dark:text-ink-600 float-left h-0 pointer-events-none;
         }
     }
 
